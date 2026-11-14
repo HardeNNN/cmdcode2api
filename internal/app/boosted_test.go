@@ -18,6 +18,7 @@ func approx(t *testing.T, got, want float64, label string) {
 func TestBoostedForGoat(t *testing.T) {
 	snap := &QuotaSnapshot{
 		MonthlyCredits: floatPtr(34.9968542434),
+		Usage:          &QuotaUsage{TotalCredits: 35.01748727819996},
 		FiveHour:       &QuotaWindow{Used: 0.4058471802, Cap: 14},
 		Weekly:         &QuotaWindow{Used: 35.0031457566, Cap: 35},
 		Plan: &QuotaPlan{
@@ -78,6 +79,7 @@ func TestBoostedForGoat(t *testing.T) {
 func TestBoostedForGoPlan(t *testing.T) {
 	snap := &QuotaSnapshot{
 		MonthlyCredits: floatPtr(3.815053954),
+		Usage:          &QuotaUsage{TotalCredits: 6.189325638},
 		Plan: &QuotaPlan{
 			PlanID:         "individual-go-v1",
 			Name:           "Go",
@@ -99,6 +101,22 @@ func TestBoostedForGoPlan(t *testing.T) {
 		}
 	}
 	t.Fatal("deepseek-v4.1-flash missing from the Go boosted list")
+}
+
+// A remaining balance above the observed pool (carried or bonus credits) must
+// not push a model's estimate past its own allowance.
+func TestBoostedForClampsRemaining(t *testing.T) {
+	snap := &QuotaSnapshot{
+		MonthlyCredits: floatPtr(90),
+		Usage:          &QuotaUsage{TotalCredits: 10},
+		Plan:           &QuotaPlan{PlanID: "individual-goat", Name: "GOAT", MonthlyCredits: floatPtr(70)},
+	}
+	view := BoostedFor(snap)
+	if view == nil {
+		t.Fatal("BoostedFor returned nil")
+	}
+	top := view.Models[0]
+	approx(t, top.RemainingUSD, top.AllowanceUSD, "clamped remaining")
 }
 
 // Plans without a per-model allowance table, or snapshots without the numbers
@@ -127,6 +145,12 @@ func TestBoostedForSkipsUnknownPlans(t *testing.T) {
 		},
 		"no remaining": {
 			Plan: &QuotaPlan{PlanID: "individual-goat", MonthlyCredits: floatPtr(70)},
+		},
+		// Without the usage aggregate the pool is only the static plan estimate
+		// (100 for GOAT), so the conversion must be skipped, not guessed.
+		"no usage aggregate": {
+			MonthlyCredits: floatPtr(34),
+			Plan:           &QuotaPlan{PlanID: "individual-goat", Name: "GOAT", MonthlyCredits: floatPtr(100)},
 		},
 		"zero pool": {
 			MonthlyCredits: floatPtr(0),

@@ -194,6 +194,13 @@ func BoostedFor(snap *QuotaSnapshot) *BoostedView {
 	if snap == nil || snap.Plan == nil || snap.Plan.MonthlyCredits == nil || snap.MonthlyCredits == nil {
 		return nil
 	}
+	// Without the usage aggregate the pool is only the community CLI's static
+	// estimate (100 credits for GOAT) rather than the observed allowance
+	// (70), which would skew every factor by ~30%. Show no tracker instead of
+	// a wrong one.
+	if snap.Usage == nil {
+		return nil
+	}
 	tier := planTier(snap.Plan.PlanID)
 	if tier == "" {
 		return nil
@@ -202,6 +209,9 @@ func BoostedFor(snap *QuotaSnapshot) *BoostedView {
 	remaining := *snap.MonthlyCredits
 	if pool <= 0 || remaining < 0 {
 		return nil
+	}
+	if remaining > pool {
+		remaining = pool
 	}
 	standard, ok := standardAllowance[tier]
 	if !ok {

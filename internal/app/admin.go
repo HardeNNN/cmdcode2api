@@ -230,7 +230,7 @@ func handleAdminAccountAdd(pool *AccountPool, cfg *Config, usage *UsageTracker, 
 		// stays fast; the UI picks the snapshot up on its next poll.
 		quotas.RefreshAsync(acct)
 		log.Printf("account %q added via webui", acct.Name)
-		snap := usage.Quota(acct.ID)
+		snap := localizeQuotaSnapshot(i18n.FromRequest(r), usage.Quota(acct.ID))
 		writeAdminJSON(w, 201, adminAccount{AccountView: acct.View(), UsageSnapshotEntry: usage.AccountUsage(acct.ID), Quota: snap, Boosted: BoostedFor(snap)})
 	}
 }
@@ -290,7 +290,7 @@ func handleAdminAccountPatch(pool *AccountPool, cfg *Config, usage *UsageTracker
 		if keyChanged && quotas != nil {
 			quotas.RefreshAsync(acct)
 		}
-		snap := usage.Quota(id)
+		snap := localizeQuotaSnapshot(i18n.FromRequest(r), usage.Quota(id))
 		writeAdminJSON(w, 200, adminAccount{AccountView: acct.View(), UsageSnapshotEntry: usage.AccountUsage(id), Quota: snap, Boosted: BoostedFor(snap)})
 	}
 }
