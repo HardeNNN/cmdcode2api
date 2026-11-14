@@ -142,16 +142,23 @@
 
   /* ---------- service line (was the overview tab) ---------- */
   .statline {
-    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
     background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
     padding: 9px 14px; margin-bottom: 14px; box-shadow: var(--shadow);
     font-size: 12px; color: var(--text-dim); min-height: 40px;
   }
-  .statline > span + span::before { content: "·"; margin-right: 8px; color: var(--text-faint); }
-  .statline > span.badge + span::before { content: none; }
+  .statline-items { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+  .statline-items > span + span::before { content: "·"; margin-right: 8px; color: var(--text-faint); }
+  .statline-items > span.badge + span::before { content: none; }
   .statline b { color: var(--text); font-weight: 650; }
   .statline .sep { color: var(--text-faint); }
   .statline .badge { margin-left: 2px; }
+  .conn {
+    margin-left: auto; flex: 0 0 auto; font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint); border: 1px solid var(--border); border-radius: 4px;
+    padding: 1px 6px; white-space: nowrap; cursor: default;
+  }
+  .conn:hover, .conn:focus-visible { color: var(--text); border-color: var(--border-strong); }
   .panel-head .meta { color: var(--text-faint); font-size: 11.5px; font-weight: 400; margin-left: 8px; }
 
   /* ---------- panels ---------- */
@@ -497,10 +504,9 @@
     <div class="topbar-in">
       <div class="brand">
         <b>cmdcode2api</b><span class="sub" data-i18n="app.console">Console</span>
-        <span class="ver" id="ver"></span>
       </div>
       <nav class="tabs" data-i18n-aria="nav.aria" aria-label="Console views">
-        <button data-tab="accounts" class="active"><span data-i18n="nav.accounts">Accounts</span><span class="count" data-count="accounts"></span></button>
+        <button data-tab="accounts" class="active" aria-current="page"><span data-i18n="nav.accounts">Accounts</span><span class="count" data-count="accounts"></span></button>
         <button data-tab="models"><span data-i18n="nav.models">Models</span><span class="count" data-count="models"></span></button>
         <button data-tab="keys"><span data-i18n="nav.keys">Keys</span><span class="count" data-count="keys"></span></button>
         <button data-tab="settings"><span data-i18n="nav.settings">Settings</span></button>
@@ -521,7 +527,10 @@
   <main class="wrap">
 
   <!-- compact service line, then the account cards underneath -->
-  <div class="statline" id="ov-line" aria-live="polite"></div>
+  <div class="statline">
+    <div class="statline-items" id="ov-line" aria-live="polite"></div>
+    <span class="conn" id="ver" tabindex="0"></span>
+  </div>
 
   <!-- accounts -->
   <section id="tab-accounts">
@@ -755,6 +764,9 @@ function updateThemeButton() {
   if (!btn) return;
   btn.textContent = effectiveTheme() === "dark" ? t("theme.light") : t("theme.dark");
   btn.title = t("theme.aria");
+  // The visible word names the target theme, so the button needs a stable
+  // accessible name that describes the action.
+  btn.setAttribute("aria-label", t("theme.aria"));
 }
 
 function applyTheme() {
@@ -777,7 +789,6 @@ const I18N = {
     "app.console": "Console",
     "app.logout": "Sign out",
 
-    "nav.overview": "Overview",
     "nav.accounts": "Accounts",
     "nav.models": "Models",
     "nav.keys": "Keys",
@@ -903,6 +914,7 @@ const I18N = {
     "ov.lineTokens": "{in} in · {out} out",
     "ov.lineAccounts": "{enabled}/{total} accounts",
     "ov.lineQuota": "{synced}/{total} synced",
+    "ov.connection": "Connection",
     "ov.totalRequests": "Total requests",
     "ov.running": "up {uptime}",
     "ov.promptTokens": "Input tokens",
@@ -1024,7 +1036,6 @@ const I18N = {
     "app.console": "控制台",
     "app.logout": "退出",
 
-    "nav.overview": "概览",
     "nav.accounts": "账号",
     "nav.models": "模型",
     "nav.keys": "密钥",
@@ -1150,6 +1161,7 @@ const I18N = {
     "ov.lineTokens": "{in} 输入 · {out} 输出",
     "ov.lineAccounts": "{enabled}/{total} 个账号",
     "ov.lineQuota": "{synced}/{total} 已同步",
+    "ov.connection": "连接",
     "ov.totalRequests": "总请求数",
     "ov.running": "运行 {uptime}",
     "ov.promptTokens": "输入 Tokens",
@@ -1344,6 +1356,8 @@ const state = {
   keys: null,
   editingAccount: null,
   restartFields: [],
+  accountsKey: "",
+  openBoosts: new Set(),
 };
 
 /* ---------- helpers ---------- */
@@ -1452,6 +1466,29 @@ function quotaResetText(w) {
   return t("quota.resetAfter", { d: fmtDuration((at - Date.now()) / 1000) });
 }
 
+// Re-label relative timers in place. Rebuilding the whole grid on every poll
+// made the reset labels flash and closed the open boosted-allowance expander.
+function refreshTimers() {
+  const root = $("#acc-list");
+  if (!root) return;
+  for (const el of root.querySelectorAll("[data-rel]")) {
+    const v = relTime(el.dataset.rel);
+    if (el.textContent !== v) el.textContent = v;
+  }
+  for (const el of root.querySelectorAll("[data-in]")) {
+    const v = inTime(el.dataset.in);
+    if (el.textContent !== v) el.textContent = v;
+  }
+  for (const el of root.querySelectorAll("[data-reset]")) {
+    const v = quotaResetText({ reset_at: el.dataset.reset });
+    if (el.textContent !== v) el.textContent = v;
+  }
+  for (const el of root.querySelectorAll("[data-rel-fmt]")) {
+    const v = t(el.dataset.relFmt, { when: relTime(el.dataset.relText) });
+    if (el.textContent !== v) el.textContent = v;
+  }
+}
+
 function quotaBar(label, w, estimated) {
   if (!w) return "";
   const cap = Number(w.cap || 0), used = Number(w.used || 0);
@@ -1464,7 +1501,7 @@ function quotaBar(label, w, estimated) {
   return `<div class="meter">
     <div class="meter-row">
       <span class="meter-label">${esc(label)}${estimated ? ' <span class="faint">' + esc(t("quota.estimated")) + "</span>" : ""}${value ? `<span class="val">${esc(value)}</span>` : ""}<span class="pct p${level}">${esc(pctText)}</span></span>
-      <span class="meter-reset">${esc(reset)}</span>
+      <span class="meter-reset"${w.reset_at ? ` data-reset="${esc(w.reset_at)}"` : ""}>${esc(reset)}</span>
     </div>
     <span class="track"><span class="fill lvl${level}" style="width:${pct.toFixed(1)}%"></span></span>
   </div>`;
@@ -1525,7 +1562,7 @@ function boostDetail(a) {
   if (top.five_hour_usd != null) notes.push(t("boost.noteFiveHour", { usd: fmtUSD(top.five_hour_usd) }));
   if (top.weekly_usd != null) notes.push(t("boost.noteWeekly", { usd: fmtUSD(top.weekly_usd) }));
   notes.push(t("boost.noteBasis", { pool: fmtCredit(pool), date: b.source_captured || "—" }));
-  return `<details class="boost">
+  return `<details class="boost" data-acc="${esc(a.id)}"${state.openBoosts.has(a.id) ? " open" : ""}>
     <summary title="${esc(basis)}">
       <span class="chev"></span>
       <span class="boost-title">${esc(t("boost.title"))}</span>
@@ -1567,7 +1604,7 @@ function quotaDetail(a) {
   if (q.last_error) errs.push(q.last_error); // backend already localized via Accept-Language
   if (q.failures && q.failures.length) errs.push(q.failures.join(t("common.listSep")));
   const metaHTML = meta.map(m => `<span>${m}</span>`).join("") +
-    (q.last_checked ? `<span class="faint">${esc(t("quota.lastChecked", { when: relTime(q.last_checked) }))}</span>` : "");
+    (q.last_checked ? `<span class="faint" data-rel-fmt="quota.lastChecked" data-rel-text="${esc(q.last_checked)}">${esc(t("quota.lastChecked", { when: relTime(q.last_checked) }))}</span>` : "");
   return `<div class="meters">${bars || `<span class="faint">${esc(t("quota.noWindow"))}</span>`}</div>
     ${metaHTML ? `<div class="quota-meta">${metaHTML}</div>` : ""}
     ${boostDetail(a)}
@@ -1701,8 +1738,14 @@ async function tryConnect() {
 
 function switchTab(tab) {
   state.tab = tab;
-  document.querySelectorAll("nav.tabs button").forEach(b =>
-    b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("nav.tabs button").forEach(b => {
+    const active = b.dataset.tab === tab;
+    b.classList.toggle("active", active);
+    // aria-current tells screen readers which tab is showing; .active alone
+    // is visual only.
+    if (active) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
   for (const name of ["accounts", "models", "keys", "settings", "logs"]) {
     $("#tab-" + name).style.display = name === tab ? "" : "none";
   }
@@ -1732,7 +1775,12 @@ setInterval(() => {
 // The old overview tab collapsed into one line above the account cards; the
 // counts that used to be KPI tiles now live in the tab chips.
 function renderOverview(ov) {
-  $("#ver").textContent = ov.version + " · " + ov.listen;
+  const conn = $("#ver");
+  if (conn) {
+    conn.textContent = ov.listen;
+    conn.title = ov.version + " · " + ov.listen;
+    conn.setAttribute("aria-label", t("ov.connection") + ": " + ov.version + " · " + ov.listen);
+  }
   const u = ov.usage;
   const quo = ov.quotas || {};
   const items = [
@@ -1744,7 +1792,15 @@ function renderOverview(ov) {
   if (quo.exceeded) items.push(`<span class="badge err">${esc(t("quota.exceeded", { n: quo.exceeded }))}</span>`);
   if (quo.low_balance) items.push(`<span class="badge warn">${esc(t("quota.lowBalance", { n: quo.low_balance }))}</span>`);
   if (quo.last_checked_at) items.push(`<span>${esc(t("quota.lastCheckedShort", { when: relTime(quo.last_checked_at) }))}</span>`);
-  $("#ov-line").innerHTML = items.join("");
+  const line = $("#ov-line");
+  // Replace only the spans whose text actually changed, so the line does not
+  // flash on every poll.
+  const kids = line.children;
+  if (kids.length === items.length) {
+    items.forEach((item, i) => { if (kids[i] && kids[i].outerHTML !== item) kids[i].outerHTML = item; });
+  } else {
+    line.innerHTML = items.join("");
+  }
 
   setTabCount("accounts", ov.accounts.total);
   setTabCount("models", ov.models.available);
@@ -1766,7 +1822,7 @@ function statusMeta(status) {
 
 function statusBadge(a) {
   if (a.status === "rate_limited" && a.rate_limited_until) {
-    return `<span class="badge warn" title="${esc(a.rate_limited_until)}">${esc(t("acc.rateLimitedBadge", { time: inTime(a.rate_limited_until) }))}</span>`;
+    return `<span class="badge warn" title="${esc(a.rate_limited_until)}">${esc(t("acc.statusRateLimited"))} · <span data-in="${esc(a.rate_limited_until)}">${esc(inTime(a.rate_limited_until))}</span></span>`;
   }
   if (a.status === "paused") {
     const hint = Number(a.pause_below_credits) > 0 ? t("acc.pausedAt", { amount: fmtCredit(a.pause_below_credits) }) : "";
@@ -1776,9 +1832,66 @@ function statusBadge(a) {
   return `<span class="badge ${meta.cls}">${esc(meta.text)}</span>`;
 }
 
+// accountSignature keeps only the fields that must trigger a card rebuild.
+// Requests/tokens/last-used change constantly and are patched by
+// refreshLiveStats instead.
+function accountSignature(a) {
+  const q = a.quota || null;
+  return JSON.stringify({
+    id: a.id, name: a.name, key: a.key_masked, enabled: a.enabled, status: a.status,
+    pause: a.pause_below_credits, rl: a.rate_limited_until, auth: a.auth_failures,
+    err: a.last_error, errAt: a.last_error_at,
+    q: q && {
+      five: q.five_hour, week: q.weekly, rem: q.monthly_credits,
+      purch: q.purchased_credits, free: q.free_credits, plan: q.plan,
+      low: q.below_threshold, ex: q.exceeded, checked: q.last_checked,
+      qerr: q.last_error, fails: q.failures,
+    },
+    b: a.boosted,
+  });
+}
+
+// Patch the counters that move every few seconds without touching the rest of
+// the card, so nothing flickers and open expanders survive.
+function refreshLiveStats(accounts) {
+  for (const a of accounts || []) {
+    const card = document.querySelector(`article.acc-card[data-acc="${CSS.escape(String(a.id))}"]`);
+    if (!card) continue;
+    const put = (key, value) => {
+      const el = card.querySelector(`[data-live="${key}"]`);
+      if (el && el.textContent !== value) el.textContent = value;
+    };
+    put("requests", fmtInt(a.requests));
+    put("tokens", fmtTokens((a.prompt_tokens || 0) + (a.completion_tokens || 0)));
+    const err = card.querySelector('[data-live="errors"]');
+    if (err) {
+      const v = fmtInt(a.errors);
+      if (err.textContent !== v) err.textContent = v;
+      err.classList.toggle("bad", Boolean(a.errors));
+    }
+    const used = card.querySelector('[data-live="used"]');
+    if (used) {
+      const v = relTime(a.last_used_at);
+      if (used.textContent !== v) used.textContent = v;
+      const t = a.last_used_at || "";
+      if (used.title !== t) used.title = t;
+    }
+  }
+}
+
 function renderAccounts(accounts) {
   const box = $("#acc-list");
   const hasAccounts = Boolean(accounts && accounts.length);
+  // A 5s poll must not rebuild identical cards: that closes open boost
+  // expanders and makes every timer label flash. Volatile counters (requests,
+  // tokens, last used) are patched in place instead of forcing a rebuild.
+  const key = state.lang + "|" + (accounts || []).map(accountSignature).join("|");
+  if (state.accountsKey === key && box.querySelector(".acc-grid, .acc-empty")) {
+    refreshLiveStats(accounts);
+    refreshTimers();
+    return;
+  }
+  state.accountsKey = key;
   setTabCount("accounts", hasAccounts ? accounts.length : 0);
   const meta = $("#acc-meta");
   if (meta) {
@@ -1802,7 +1915,7 @@ function accountCard(a) {
   const tokens = (a.prompt_tokens || 0) + (a.completion_tokens || 0);
   const mods = [a.status === "auth_error" ? "is-err" : (a.status === "rate_limited" || a.status === "paused") ? "is-warn" : "", a.enabled ? "" : "is-off"].filter(Boolean).join(" ");
   const authFail = a.auth_failures > 0 ? `<span class="authfail">${esc(t("acc.authFailures", { n: a.auth_failures }))}</span>` : "";
-  return `<article class="acc-card ${mods}">
+  return `<article class="acc-card ${mods}" data-acc="${esc(a.id)}">
     <div class="acc-head">
       <div class="acc-id">
         <div class="acc-name" title="${esc(a.name)}">${esc(a.name)}</div>
@@ -1812,10 +1925,10 @@ function accountCard(a) {
     </div>
     <div class="acc-sec">${quotaDetail(a)}</div>
     <div class="telemetry">
-      <span>${esc(t("common.requests"))} <b>${fmtInt(a.requests)}</b></span>
-      <span>${esc(t("common.tokens"))} <b>${fmtTokens(tokens)}</b></span>
-      <span>${esc(t("common.errors"))} <b class="${a.errors ? "bad" : ""}">${fmtInt(a.errors)}</b></span>
-      <span>${esc(t("common.lastUsed"))} <b title="${esc(a.last_used_at || "")}">${esc(relTime(a.last_used_at))}</b></span>
+      <span>${esc(t("common.requests"))} <b data-live="requests">${fmtInt(a.requests)}</b></span>
+      <span>${esc(t("common.tokens"))} <b data-live="tokens">${fmtTokens(tokens)}</b></span>
+      <span>${esc(t("common.errors"))} <b data-live="errors" class="${a.errors ? "bad" : ""}">${fmtInt(a.errors)}</b></span>
+      <span>${esc(t("common.lastUsed"))} <b data-live="used" title="${esc(a.last_used_at || "")}">${esc(relTime(a.last_used_at))}</b></span>
     </div>
     <div class="actions-grid">
       <button class="btn small" onclick="refreshAccountQuota('${a.id}')">${esc(t("quota.refreshOne"))}</button>
@@ -2284,6 +2397,17 @@ document.querySelectorAll("select.lang-select").forEach(sel =>
 
 document.querySelectorAll("nav.tabs button").forEach(b =>
   b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+// <details> does not bubble its toggle event; capture it to remember which
+// accounts the operator expanded across polls.
+$("#acc-list").addEventListener("toggle", e => {
+  const d = e.target;
+  if (!d || d.tagName !== "DETAILS" || !d.classList.contains("boost")) return;
+  const id = d.dataset.acc;
+  if (!id) return;
+  if (d.open) state.openBoosts.add(id);
+  else state.openBoosts.delete(id);
+}, true);
 
 $("#acc-add-open").addEventListener("click", openAddAccount);
 $("#acc-add-btn").addEventListener("click", addAccount);
