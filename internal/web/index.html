@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
 <title>cmdcode2api Console</title>
 <style>
   /* ---------- tokens: light default, dark follows the OS or the pinned theme ---------- */
@@ -1466,27 +1467,23 @@ function quotaResetText(w) {
   return t("quota.resetAfter", { d: fmtDuration((at - Date.now()) / 1000) });
 }
 
+// Write text only when our own value changes. Comparing against the DOM text
+// would fight browser translation extensions and repaint every poll.
+function setLiveText(el, value) {
+  if (!el || el.dataset.liveValue === value) return;
+  el.dataset.liveValue = value;
+  el.textContent = value;
+}
+
 // Re-label relative timers in place. Rebuilding the whole grid on every poll
 // made the reset labels flash and closed the open boosted-allowance expander.
 function refreshTimers() {
   const root = $("#acc-list");
   if (!root) return;
-  for (const el of root.querySelectorAll("[data-rel]")) {
-    const v = relTime(el.dataset.rel);
-    if (el.textContent !== v) el.textContent = v;
-  }
-  for (const el of root.querySelectorAll("[data-in]")) {
-    const v = inTime(el.dataset.in);
-    if (el.textContent !== v) el.textContent = v;
-  }
-  for (const el of root.querySelectorAll("[data-reset]")) {
-    const v = quotaResetText({ reset_at: el.dataset.reset });
-    if (el.textContent !== v) el.textContent = v;
-  }
-  for (const el of root.querySelectorAll("[data-rel-fmt]")) {
-    const v = t(el.dataset.relFmt, { when: relTime(el.dataset.relText) });
-    if (el.textContent !== v) el.textContent = v;
-  }
+  for (const el of root.querySelectorAll("[data-rel]")) setLiveText(el, relTime(el.dataset.rel));
+  for (const el of root.querySelectorAll("[data-in]")) setLiveText(el, inTime(el.dataset.in));
+  for (const el of root.querySelectorAll("[data-reset]")) setLiveText(el, quotaResetText({ reset_at: el.dataset.reset }));
+  for (const el of root.querySelectorAll("[data-rel-fmt]")) setLiveText(el, t(el.dataset.relFmt, { when: relTime(el.dataset.relText) }));
 }
 
 function quotaBar(label, w, estimated) {
@@ -1793,14 +1790,17 @@ function renderOverview(ov) {
   if (quo.low_balance) items.push(`<span class="badge warn">${esc(t("quota.lowBalance", { n: quo.low_balance }))}</span>`);
   if (quo.last_checked_at) items.push(`<span>${esc(t("quota.lastCheckedShort", { when: relTime(quo.last_checked_at) }))}</span>`);
   const line = $("#ov-line");
-  // Replace only the spans whose text actually changed, so the line does not
-  // flash on every poll.
+  // Compare against our own previous markup, not the live DOM: a translation
+  // extension may have rewritten the text, and rewriting it back every poll is
+  // what makes the line flicker.
+  const prev = line.dataset.items ? JSON.parse(line.dataset.items) : [];
   const kids = line.children;
-  if (kids.length === items.length) {
-    items.forEach((item, i) => { if (kids[i] && kids[i].outerHTML !== item) kids[i].outerHTML = item; });
-  } else {
+  if (kids.length !== items.length) {
     line.innerHTML = items.join("");
+  } else {
+    items.forEach((item, i) => { if (kids[i] && prev[i] !== item) kids[i].outerHTML = item; });
   }
+  line.dataset.items = JSON.stringify(items);
 
   setTabCount("accounts", ov.accounts.total);
   setTabCount("models", ov.models.available);
@@ -1857,22 +1857,17 @@ function refreshLiveStats(accounts) {
   for (const a of accounts || []) {
     const card = document.querySelector(`article.acc-card[data-acc="${CSS.escape(String(a.id))}"]`);
     if (!card) continue;
-    const put = (key, value) => {
-      const el = card.querySelector(`[data-live="${key}"]`);
-      if (el && el.textContent !== value) el.textContent = value;
-    };
+    const put = (key, value) => setLiveText(card.querySelector(`[data-live="${key}"]`), value);
     put("requests", fmtInt(a.requests));
     put("tokens", fmtTokens((a.prompt_tokens || 0) + (a.completion_tokens || 0)));
     const err = card.querySelector('[data-live="errors"]');
     if (err) {
-      const v = fmtInt(a.errors);
-      if (err.textContent !== v) err.textContent = v;
+      setLiveText(err, fmtInt(a.errors));
       err.classList.toggle("bad", Boolean(a.errors));
     }
     const used = card.querySelector('[data-live="used"]');
     if (used) {
-      const v = relTime(a.last_used_at);
-      if (used.textContent !== v) used.textContent = v;
+      setLiveText(used, relTime(a.last_used_at));
       const t = a.last_used_at || "";
       if (used.title !== t) used.title = t;
     }
