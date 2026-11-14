@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"cmdcode2api/internal/i18n"
 )
@@ -458,5 +459,36 @@ func TestLocalizeQuotaSnapshot(t *testing.T) {
 	// Nil is nil-safe (mirrors usage.Quota returning nil for unknown accounts).
 	if got := localizeQuotaSnapshot(i18n.ZHCN, nil); got != nil {
 		t.Fatalf("nil snapshot = %+v, want nil", got)
+	}
+}
+
+func TestStatusViewMarksExceededWindow(t *testing.T) {
+	reset := time.Now().Add(19 * time.Hour)
+	snap := &QuotaSnapshot{Weekly: &QuotaWindow{Used: 35, Cap: 35, Exceeded: true, ResetAt: &reset}}
+
+	view := statusView(AccountView{Status: "ok"}, snap)
+	if view.Status != "rate_limited" || !view.RateLimited {
+		t.Fatalf("view = %+v, want rate_limited", view)
+	}
+	if view.RateLimitedUntil == nil || !view.RateLimitedUntil.Equal(reset) {
+		t.Fatalf("until = %v, want the window reset %v", view.RateLimitedUntil, reset)
+	}
+
+	// An existing cooldown keeps its own deadline.
+	cooldown := time.Now().Add(time.Hour)
+	view = statusView(AccountView{Status: "rate_limited", RateLimited: true, RateLimitedUntil: &cooldown}, snap)
+	if view.RateLimitedUntil == nil || !view.RateLimitedUntil.Equal(cooldown) {
+		t.Fatalf("cooldown overwritten: %v", view.RateLimitedUntil)
+	}
+
+	// Other statuses and missing snapshots are left alone.
+	if got := statusView(AccountView{Status: "paused"}, snap); got.Status != "paused" {
+		t.Fatalf("paused became %q", got.Status)
+	}
+	if got := statusView(AccountView{Status: "auth_error"}, snap); got.Status != "auth_error" {
+		t.Fatalf("auth_error became %q", got.Status)
+	}
+	if got := statusView(AccountView{Status: "ok"}, nil); got.Status != "ok" {
+		t.Fatalf("nil snapshot changed status to %q", got.Status)
 	}
 }
