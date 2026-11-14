@@ -320,7 +320,10 @@
   .dim { color: var(--text-dim); }
   .faint { color: var(--text-faint); }
   .restart-note { color: var(--amber); font-size: 12.5px; margin-top: 8px; display: none; }
-  .err-line { color: var(--red); font-size: 11.5px; font-family: var(--mono); word-break: break-all; }
+  .err-line {
+    color: var(--red); font-size: 11.5px; font-family: var(--mono);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help;
+  }
 
   /* ---------- quota meters ---------- */
   .meters {
@@ -404,6 +407,7 @@
   .acc-name { font-weight: 650; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .acc-key { color: var(--text-faint); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .acc-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .acc-flags { display: flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
   .acc-badges .authfail { color: var(--text-faint); font-size: 11px; white-space: nowrap; }
   .acc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; }
   .acc-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
@@ -424,6 +428,13 @@
 
   .actions-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
   .actions-grid .btn { min-height: 28px; padding: 3px 6px; font-size: 11px; }
+
+  .acc-split {
+    display: flex; align-items: center; gap: 10px;
+    margin: 20px 0 12px; color: var(--text-faint);
+    font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
+  }
+  .acc-split::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 
   .acc-empty {
     grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 14px;
@@ -943,6 +954,7 @@ const I18N = {
     "acc.hint": "Accounts are used in round-robin order. A rate-limited (429) account goes into cooldown and is skipped until it recovers; 401/403/5xx fail over to the next account automatically. OAuth requires the browser to reach the server's callback ports 127.0.0.1:5959-5968. Quotas auto-refresh every 5 minutes; tap a refresh icon on an account to force a fresh check.",
     "acc.listTitle": "Account list",
     "acc.empty": "No accounts yet",
+    "acc.inactive": "Inactive · {n}",
     "acc.statusOk": "Healthy",
     "acc.statusRateLimited": "Rate-limited",
     "acc.statusPaused": "Paused (low credits)",
@@ -1190,6 +1202,7 @@ const I18N = {
     "acc.hint": "多账号按轮询方式轮流使用；某个账号 429 限流时自动冷却并在期间跳过，401/403/5xx 自动切换到下一个账号。OAuth 需要浏览器能访问服务器的 127.0.0.1:5959-5968 回调端口。额度每 5 分钟自动刷新，也可在账号列表中手动刷新。",
     "acc.listTitle": "账号列表",
     "acc.empty": "暂无账号",
+    "acc.inactive": "已停用 · {n}",
     "acc.statusOk": "正常",
     "acc.statusRateLimited": "限流中",
     "acc.statusPaused": "已暂停（额度不足）",
@@ -1658,7 +1671,10 @@ async function api(path, opts = {}) {
   }
   let resp;
   try {
-    resp = await fetch(base + path, init);
+    // Older builds served admin GETs without Cache-Control, leaving stale
+    // JSON in the browser cache; a per-request key keeps the UI authoritative.
+    const url = base + path + (init.method === "GET" ? (path.includes("?") ? "&" : "?") + "_=" + Date.now() : "");
+    resp = await fetch(url, { ...init, cache: "no-store" });
   } catch (e) {
     throw new Error(t("err.connect", { msg: e.message }));
   }
@@ -1927,7 +1943,21 @@ function renderAccounts(accounts) {
     </div>`;
     return;
   }
-  box.innerHTML = `<div class="acc-grid">${accounts.map(accountCard).join("")}</div>`;
+  box.innerHTML = renderAccountSections(accounts);
+}
+
+// Active accounts stay on top; disabled ones get their own section behind a
+// separator so they never mix into the cards you actually route traffic to.
+function renderAccountSections(accounts) {
+  const active = accounts.filter(a => a.enabled);
+  const inactive = accounts.filter(a => !a.enabled);
+  const sections = [];
+  if (active.length) sections.push(`<div class="acc-grid">${active.map(accountCard).join("")}</div>`);
+  if (inactive.length) {
+    sections.push(`<div class="acc-split">${esc(t("acc.inactive", { n: inactive.length }))}</div>`);
+    sections.push(`<div class="acc-grid">${inactive.map(accountCard).join("")}</div>`);
+  }
+  return sections.join("");
 }
 
 function accountCard(a) {
@@ -1940,7 +1970,7 @@ function accountCard(a) {
         <div class="acc-name" title="${esc(a.name)}">${esc(a.name)}</div>
         <div class="acc-key mono" title="${esc(a.key_masked)}">${esc(a.key_masked)}</div>
       </div>
-      <div class="acc-badges">${planBadge(a)}${statusBadge(a)}${exceededBadge(a)}${authFail}</div>
+      <div class="acc-badges">${planBadge(a)}<span class="acc-flags">${statusBadge(a)}${exceededBadge(a)}${authFail}</span></div>
     </div>
     <div class="acc-sec">${quotaDetail(a)}</div>
     <div class="telemetry">
@@ -1956,7 +1986,7 @@ function accountCard(a) {
       <button class="btn small" data-act="toggle" data-id="${esc(a.id)}" data-enabled="${a.enabled ? "false" : "true"}">${a.enabled ? esc(t("common.disable")) : esc(t("common.enable"))}</button>
       <button class="btn small danger" data-act="delete" data-id="${esc(a.id)}">${esc(t("common.delete"))}</button>
     </div>
-    ${a.last_error ? `<div class="err-line">${esc(t("acc.lastError", { time: relTime(a.last_error_at), msg: a.last_error }))}</div>` : ""}
+    ${a.last_error ? (() => { const msg = t("acc.lastError", { time: relTime(a.last_error_at), msg: a.last_error }); return `<div class="err-line" title="${esc(msg)}">${esc(msg)}</div>`; })() : ""}
   </article>`;
 }
 
