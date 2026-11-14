@@ -5,23 +5,87 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cmdcode2api Console</title>
 <style>
+  /* ---------- tokens: light default, dark follows the OS or the pinned theme ---------- */
   :root {
-    --bg: #101216;
-    --panel: #171a1f;
-    --panel-2: #20242b;
-    --border: #303640;
-    --text: #e6e9ee;
-    --text-dim: #a8b1be;
-    --text-faint: #929dab;
-    --accent: #4f8cff;
-    --accent-dim: #356fd6;
-    --green: #34d399;
-    --amber: #fbbf24;
-    --red: #f87171;
+    color-scheme: light;
+    --bg: #f7f7f4;
+    --panel: #ffffff;
+    --panel-2: #f1f0eb;
+    --border: #e4e2da;
+    --border-strong: #c9c6ba;
+    --text: #141413;
+    --text-dim: #575653;
+    --text-faint: #7a7973;
+    --accent: #2563eb;
+    --accent-dim: #1d4ed8;
+    --green: #047857;
+    --amber: #b45309;
+    --orange: #c2410c;
+    --red: #b91c1c;
+    --track: #e8e6df;
+    --shadow: 0 1px 2px rgba(20,20,19,.06);
+    --shadow-hover: 0 4px 14px rgba(20,20,19,.10);
+    --plan-go: #0369a1;
+    --plan-goat: #6d28d9;
+    --plan-pro: #4338ca;
+    --plan-max: #a21caf;
+    --plan-team: #0f766e;
     --control-height: 36px;
-    color-scheme: dark;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121211;
+      --panel: #1a1a18;
+      --panel-2: #232320;
+      --border: #2c2c28;
+      --border-strong: #3f3f3a;
+      --text: #ededec;
+      --text-dim: #9e9d99;
+      --text-faint: #77766f;
+      --accent: #60a5fa;
+      --accent-dim: #3b82f6;
+      --green: #4ade80;
+      --amber: #fbbf24;
+      --orange: #fb923c;
+      --red: #f87171;
+      --track: #2e2e2a;
+      --shadow: 0 1px 3px rgba(0,0,0,.35);
+      --shadow-hover: 0 4px 16px rgba(0,0,0,.5);
+      --plan-go: #38bdf8;
+      --plan-goat: #c4b5fd;
+      --plan-pro: #a5b4fc;
+      --plan-max: #f0abfc;
+      --plan-team: #5eead4;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121211;
+    --panel: #1a1a18;
+    --panel-2: #232320;
+    --border: #2c2c28;
+    --border-strong: #3f3f3a;
+    --text: #ededec;
+    --text-dim: #9e9d99;
+    --text-faint: #77766f;
+    --accent: #60a5fa;
+    --accent-dim: #3b82f6;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --orange: #fb923c;
+    --red: #f87171;
+    --track: #2e2e2a;
+    --shadow: 0 1px 3px rgba(0,0,0,.35);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,.5);
+    --plan-go: #38bdf8;
+    --plan-goat: #c4b5fd;
+    --plan-pro: #a5b4fc;
+    --plan-max: #f0abfc;
+    --plan-team: #5eead4;
+  }
+
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; padding: 0; background: var(--bg); }
@@ -29,54 +93,80 @@
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: 14px; line-height: 1.55;
+    font-size: 14px; line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
     min-height: 100vh;
   }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
   code, .mono { font-family: var(--mono); font-size: 12.5px; }
+  h1, h2, h3 { letter-spacing: -.01em; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .wrap { max-width: 1320px; margin: 0 auto; padding: 0 32px 48px; }
-
-  header.bar {
-    display: flex; align-items: center; gap: 14px;
-    padding: 20px 0; border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
+  /* ---------- top bar ---------- */
+  header.topbar { background: var(--panel); border-bottom: 1px solid var(--border); }
+  .topbar-in {
+    width: 100%; margin: 0; padding: 9px 28px; min-height: 58px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
   }
-  header.bar .logo { font-weight: 650; font-size: 16px; }
-  header.bar .logo span { color: var(--text-dim); font-weight: 400; margin-left: 6px; }
-  header.bar .ver { color: var(--text-faint); font-family: var(--mono); font-size: 12px; }
-  header.bar .spacer { flex: 1; }
+  header.bar .logo, .brand b { font-size: 15.5px; font-weight: 700; }
+  .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .brand .sub { color: var(--text-dim); font-size: 13px; }
+  .brand .ver { color: var(--text-faint); font-family: var(--mono); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spacer { flex: 1; }
 
-  select.lang-select { width: auto; min-width: 112px; font-size: 12.5px; }
+  select.lang-select { width: auto; min-width: 112px; font-size: 12.5px; min-height: 34px; padding: 5px 30px 5px 8px; }
   .login-lang { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 
-  nav.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  nav.tabs {
+    display: inline-flex; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 3px; gap: 2px; overflow-x: auto; scrollbar-width: none; margin: 0;
+  }
   nav.tabs::-webkit-scrollbar { display: none; }
   nav.tabs button {
-    min-height: 44px; font-family: inherit;
-    appearance: none; background: none; border: none; cursor: pointer;
-    color: var(--text-dim); font-size: 14px; padding: 9px 14px; white-space: nowrap;
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    appearance: none; border: 0; background: transparent; font: inherit; font-size: 12.5px;
+    font-weight: 600; color: var(--text-dim); padding: 5px 11px; border-radius: 6px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-height: 30px;
   }
   nav.tabs button:hover { color: var(--text); }
-  nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
-
-  .cards {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    border: 1px solid var(--border); border-radius: 8px;
-    background: var(--panel); margin-bottom: 24px; overflow: hidden;
+  nav.tabs button.active { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
+  nav.tabs .count {
+    font-family: var(--mono); font-size: 10.5px; padding: 0 5px; border-radius: 4px;
+    background: var(--panel-2); color: var(--text-dim);
   }
-  .card { min-width: 0; padding: 20px 24px; border-right: 1px solid var(--border); }
-  .card:nth-child(4n) { border-right: 0; }
-  .card:nth-child(n+5) { border-top: 1px solid var(--border); }
-  .card .label { color: var(--text-dim); font-size: 12px; margin-bottom: 8px; }
-  .card .value { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; overflow-wrap: anywhere; }
-  .card .sub { color: var(--text-faint); font-size: 12px; margin-top: 6px; }
+  nav.tabs .count:empty { display: none; }
+  .tb-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; min-width: 0; }
-  .panel h2 { margin: 0 0 16px; font-size: 15px; font-weight: 600; color: var(--text); }
+  .wrap { width: 100%; max-width: none; margin: 0; padding: 20px 28px 72px; }
+
+  /* ---------- service line (was the overview tab) ---------- */
+  .statline {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 14px; margin-bottom: 14px; box-shadow: var(--shadow);
+    font-size: 12px; color: var(--text-dim); min-height: 40px;
+  }
+  .statline > span + span::before { content: "·"; margin-right: 8px; color: var(--text-faint); }
+  .statline > span.badge + span::before { content: none; }
+  .statline b { color: var(--text); font-weight: 650; }
+  .statline .sep { color: var(--text-faint); }
+  .statline .badge { margin-left: 2px; }
+  .panel-head .meta { color: var(--text-faint); font-size: 11.5px; font-weight: 400; margin-left: 8px; }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 18px 18px; margin-bottom: 16px; min-width: 0; box-shadow: var(--shadow);
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    gap: 12px; margin-bottom: 14px; min-height: var(--control-height);
+  }
+  .panel h2 { margin: 0; font-size: 14px; font-weight: 650; color: var(--text); }
   .panel .hint { color: var(--text-dim); font-size: 12.5px; margin: 12px 0 0; max-width: 75ch; }
+  .head-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .head-actions input { width: 220px; min-width: 120px; }
   .table-scroll { overflow-x: auto; padding: 2px; }
 
   table { width: 100%; border-collapse: collapse; }
@@ -86,44 +176,54 @@
   td.num { font-family: var(--mono); font-size: 12.5px; }
   .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
 
+  /* ---------- badges ---------- */
   .badge {
-    display: inline-block; padding: 2px 7px; border-radius: 4px;
-    font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px;
+    font-size: 11px; font-weight: 650; white-space: nowrap;
   }
-  .badge.ok      { background: rgba(52,211,153,.12); color: var(--green); }
-  .badge.warn    { background: rgba(251,191,36,.13); color: var(--amber); }
-  .badge.err     { background: rgba(248,113,113,.13); color: var(--red); }
-  .badge.off     { background: rgba(151,163,177,.13); color: var(--text-dim); }
+  .badge.ok      { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green); }
+  .badge.warn    { background: color-mix(in srgb, var(--amber) 14%, transparent); color: var(--amber); }
+  .badge.err     { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+  .badge.off     { background: color-mix(in srgb, var(--text-faint) 14%, transparent); color: var(--text-dim); }
+  .badge.plan    { background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); }
+  .badge.plan-go   { background: color-mix(in srgb, var(--plan-go) 13%, transparent); color: var(--plan-go); border-color: color-mix(in srgb, var(--plan-go) 30%, transparent); }
+  .badge.plan-goat { background: color-mix(in srgb, var(--plan-goat) 15%, transparent); color: var(--plan-goat); border-color: color-mix(in srgb, var(--plan-goat) 32%, transparent); }
+  .badge.plan-pro  { background: color-mix(in srgb, var(--plan-pro) 15%, transparent); color: var(--plan-pro); border-color: color-mix(in srgb, var(--plan-pro) 32%, transparent); }
+  .badge.plan-max  { background: color-mix(in srgb, var(--plan-max) 15%, transparent); color: var(--plan-max); border-color: color-mix(in srgb, var(--plan-max) 32%, transparent); }
+  .badge.plan-team { background: color-mix(in srgb, var(--plan-team) 15%, transparent); color: var(--plan-team); border-color: color-mix(in srgb, var(--plan-team) 32%, transparent); }
 
+  /* ---------- buttons ---------- */
   .btn {
     appearance: none; cursor: pointer; border-radius: 6px;
     min-height: var(--control-height); font-family: inherit;
     border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
     font-size: 12.5px; padding: 6px 12px;
     display: inline-flex; align-items: center; justify-content: center;
-    text-decoration: none; line-height: 1.4; white-space: nowrap;
+    text-decoration: none; line-height: 1.4; white-space: nowrap; font-weight: 500;
   }
-  .btn:hover { border-color: var(--accent-dim); text-decoration: none; }
+  .btn:hover { border-color: var(--border-strong); background: var(--track); text-decoration: none; }
   .btn.primary { background: var(--accent-dim); border-color: var(--accent-dim); color: #fff; font-weight: 600; }
-  .btn.primary:hover { background: #2b5db8; border-color: #2b5db8; }
+  .btn.primary:hover { background: var(--accent-dim); border-color: var(--accent-dim); filter: brightness(1.07); }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--text-dim); }
+  .btn.ghost:hover { background: var(--panel-2); color: var(--text); }
   .btn.danger { color: var(--red); }
   .btn.danger:hover { border-color: var(--red); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn.small { padding: 5px 10px; font-size: 12px; }
+  .btn.small { min-height: 30px; padding: 4px 9px; font-size: 11.5px; }
   .row-actions .btn, .acc-actions .btn { min-height: 32px; }
 
-  input[type=text], input[type=password], textarea, select {
-    width: 100%; background: #0d1117; color: var(--text);
+  /* ---------- forms ---------- */
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; background: var(--panel); color: var(--text);
     border: 1px solid var(--border); border-radius: 6px;
     min-height: var(--control-height); padding: 7px 11px; font-size: 13.5px; outline: none;
     font-family: inherit;
   }
-  input::placeholder, textarea::placeholder { color: var(--text-dim); opacity: 1; }
+  input::placeholder, textarea::placeholder { color: var(--text-faint); opacity: 1; }
   textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; min-height: 84px; }
   input:focus, textarea:focus, select:focus { border-color: var(--accent); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 2px; }
-  select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%23a8b1be' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; }
+  select { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%237a7973' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; }
   button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; flex-shrink: 0; }
   .check-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; }
@@ -145,7 +245,7 @@
   /* login */
   /* Keep login spacing inside the page so margins cannot move the body. */
   #view-login { padding-top: 12vh; }
-  .login-box { max-width: 400px; margin: 0 auto; padding: 28px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  .login-box { max-width: 400px; margin: 0 auto; padding: 28px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
   .login-box .title { text-align: left; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
   .login-box .title span { display: block; margin-top: 6px; color: var(--text); font-size: 16px; font-weight: 500; }
   .login-box .desc { text-align: left; color: var(--text-dim); font-size: 13px; margin-bottom: 24px; }
@@ -155,8 +255,8 @@
   #toasts { position: fixed; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
   .toast {
     background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 14px; font-size: 13px; max-width: 380px;
-    box-shadow: 0 6px 24px rgba(0,0,0,.4);
+    padding: 10px 14px; font-size: 13px; max-width: 380px; color: var(--text);
+    box-shadow: var(--shadow-hover);
     animation: slidein .18s ease-out;
   }
   .toast.err { border-color: var(--red); color: var(--red); }
@@ -171,18 +271,15 @@
   .modal {
     background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
     width: min(520px, 100%); padding: 24px; max-height: 84vh; overflow: auto;
+    color: var(--text); box-shadow: var(--shadow-hover);
   }
   .modal h3 { margin: 0 0 14px; font-size: 15px; }
   .modal .status-line { margin: 12px 0; font-size: 13px; color: var(--text-dim); }
   .modal .hint { color: var(--text-faint); font-size: 12.5px; line-height: 1.7; margin: 12px 0 0; }
   .modal .modal-err { color: var(--red); font-size: 12.5px; min-height: 18px; margin: 0 0 6px; }
 
-  .panel-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; min-height: var(--control-height); }
-  .panel .panel-head h2 { margin: 0; }
-  .head-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-  .head-actions input { width: 220px; min-width: 120px; }
-  .settings-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-  .settings-layout > .panel { margin: 0; }
+  .settings-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .settings-layout > .panel, .settings-layout > div > .panel { margin-bottom: 16px; }
   .settings-layout .fields-2 { gap: 16px; }
   .settings-layout .hint { margin-bottom: 16px; }
   .spinner {
@@ -193,7 +290,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .logbox {
-    background: #0d1117; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
     padding: 12px 14px; font-family: var(--mono); font-size: 12px; line-height: 1.7;
     height: 60vh; overflow: auto; white-space: pre-wrap; word-break: break-all;
   }
@@ -208,87 +305,143 @@
   .model-grid .mid { font-family: var(--mono); font-size: 12px; word-break: break-all; }
   .model-grid label.hidden-model .mid { color: var(--text-faint); }
   .empty { color: var(--text-faint); text-align: center; padding: 26px 0; font-size: 13px; }
-  .kv { display: grid; grid-template-columns: 180px 1fr; gap: 12px 24px; font-size: 13px; }
+  .kv { display: grid; grid-template-columns: 180px 1fr; gap: 10px 24px; font-size: 13px; }
   .kv .k { color: var(--text-dim); }
   .kv .v { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
-  header.bar .ver { white-space: nowrap; }
   .nowrap { white-space: nowrap; }
   .dim { color: var(--text-dim); }
   .faint { color: var(--text-faint); }
   .restart-note { color: var(--amber); font-size: 12.5px; margin-top: 8px; display: none; }
-  .err-line { color: var(--red); font-size: 12px; font-family: var(--mono); word-break: break-all; }
+  .err-line { color: var(--red); font-size: 11.5px; font-family: var(--mono); word-break: break-all; }
 
-  /* quota */
-  .quota-bars { display: flex; flex-direction: column; gap: 10px; }
-  .qbar { display: block; }
-  .qbar .qhead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; }
-  .qbar .qlabel { color: var(--text-dim); white-space: nowrap; }
-  .qbar .qval { color: var(--text-faint); font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }
-  .qbar .track { display: block; margin-top: 5px; background: #0d1117; border: 1px solid var(--border); border-radius: 5px; height: 8px; overflow: hidden; }
-  .qbar .fill { display: block; height: 100%; }
-  .qbar .qsub { color: var(--text-faint); font-size: 11px; margin-top: 4px; }
-  .lvl-1 { background: var(--green); }
-  .lvl-2 { background: var(--amber); }
-  .lvl-3 { background: #f97316; }
-  .lvl-4 { background: var(--red); }
-  .quota-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; font-size: 12.5px; color: var(--text-dim); }
-  .quota-meta b { color: var(--text); font-weight: 600; font-family: var(--mono); }
-  .quota-err { color: var(--red); font-size: 12px; font-family: var(--mono); margin-top: 8px; word-break: break-all; }
-
-  /* accounts: one card per account, side by side */
-  .acc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 0 24px; }
-  @media (max-width: 720px) { .acc-grid { grid-template-columns: 1fr; } }
-  .acc-card {
-    display: flex; flex-direction: column; gap: 12px;
-    border-top: 1px solid var(--border); min-width: 0;
-    padding: 20px 0;
+  /* ---------- quota meters ---------- */
+  .meters {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 11px; display: flex; flex-direction: column; gap: 9px;
   }
-  .acc-card.is-off { background: var(--panel); }
+  .meter { display: flex; flex-direction: column; gap: 4px; }
+  .meter-row { display: flex; align-items: baseline; justify-content: space-between; gap: 2px 8px; font-size: 11.5px; flex-wrap: wrap; }
+  .meter-label { color: var(--text); font-weight: 600; white-space: nowrap; }
+  .meter-label .val { font-weight: 400; color: var(--text-dim); margin-left: 4px; }
+  .meter-label .pct { margin-left: 4px; font-weight: 650; }
+  .meter-reset { color: var(--text-faint); font-family: var(--mono); font-size: 10.5px; white-space: nowrap; }
+  .track { display: block; height: 4px; background: var(--track); border-radius: 2px; overflow: hidden; }
+  .fill { display: block; height: 100%; border-radius: 2px; transition: width .3s ease; }
+  .lvl1 { background: var(--green); }
+  .lvl2 { background: var(--amber); }
+  .lvl3 { background: var(--orange); }
+  .lvl4 { background: var(--red); }
+  .p1 { color: var(--green); } .p2 { color: var(--amber); } .p3 { color: var(--orange); } .p4 { color: var(--red); }
+
+  .quota-meta { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11.5px; color: var(--text-dim); align-items: center; }
+  .quota-meta b { color: var(--text); font-weight: 600; font-family: var(--mono); }
+  .quota-meta .sep { color: var(--text-faint); }
+  .quota-err { color: var(--red); font-size: 11.5px; font-family: var(--mono); margin-top: 8px; word-break: break-all; }
+
+  /* ---------- boosted allowance expander ---------- */
+  details.boost { border-top: 1px solid var(--border); padding-top: 9px; margin-top: 1px; }
+  details.boost > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: baseline;
+    gap: 7px; font-size: 11.5px; padding: 2px 0; border-radius: 4px; min-height: 22px;
+  }
+  details.boost > summary::-webkit-details-marker { display: none; }
+  details.boost > summary:hover .boost-title { color: var(--accent); }
+  .chev {
+    width: 0; height: 0; border-left: 5px solid var(--text-faint);
+    border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+    transition: transform .15s; flex: 0 0 auto; margin-top: 1px;
+  }
+  details.boost[open] .chev { transform: rotate(90deg); }
+  .boost-title { color: var(--text-dim); font-weight: 650; white-space: nowrap; }
+  .boost-title::after { content: "·"; margin: 0 3px 0 6px; color: var(--text-faint); }
+  .boost-peak { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .boost-peak .left { color: var(--green); font-weight: 650; }
+  .boost-peak .of { color: var(--text-faint); }
+  .boost-flag {
+    margin-left: auto; color: var(--text-faint); font-size: 10px; text-transform: uppercase;
+    letter-spacing: .05em; border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; flex: 0 0 auto;
+  }
+  .boost-body { margin-top: 7px; }
+  table.bm { width: 100%; border-collapse: collapse; font-size: 11px; }
+  table.bm th {
+    text-align: left; color: var(--text-faint); font-weight: 600; font-size: 10px;
+    letter-spacing: .03em; text-transform: uppercase; padding: 3px 6px 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  table.bm td { padding: 4px 6px 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); font-size: 11px; }
+  table.bm tr:last-child td { border-bottom: 0; }
+  table.bm .num { text-align: right; font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+  table.bm .model { font-weight: 600; }
+  table.bm .boostx { color: var(--accent); font-family: var(--mono); }
+  table.bm .left { color: var(--text); }
+  table.bm .allow { color: var(--text-dim); }
+  .boost-note { color: var(--text-faint); font-size: 10.5px; line-height: 1.45; margin: 7px 0 0; }
+  .boost-note code { font-family: var(--mono); font-size: 10px; }
+
+  /* ---------- account cards ---------- */
+  .acc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .acc-card {
+    display: flex; flex-direction: column; gap: 12px; min-width: 0;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .acc-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-hover); }
+  .acc-card.is-off { opacity: .72; }
   .acc-card.is-off .acc-name { color: var(--text-dim); }
-  .acc-card.is-warn { border-color: rgba(251,191,36,.32); }
-  .acc-card.is-err { border-color: rgba(248,113,113,.32); }
+  .acc-card.is-warn { border-color: color-mix(in srgb, var(--amber) 40%, var(--border)); }
+  .acc-card.is-err { border-color: color-mix(in srgb, var(--red) 45%, var(--border)); }
   .acc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
   .acc-id { min-width: 0; }
-  .acc-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .acc-key { color: var(--text-faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acc-name { font-weight: 650; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acc-key { color: var(--text-faint); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .acc-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-  .acc-badges .authfail { color: var(--text-faint); font-size: 11.5px; white-space: nowrap; }
+  .acc-badges .authfail { color: var(--text-faint); font-size: 11px; white-space: nowrap; }
   .acc-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 18px; }
   .acc-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
   .acc-stat .k { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
   .acc-stat .v { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .acc-stat .v.t { font-family: inherit; color: var(--text-dim); }
   .acc-stat .v.bad { color: var(--red); }
-  .acc-sec { border-top: 1px solid var(--border); padding-top: 12px; }
-  .acc-actions {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    margin-top: auto; border-top: 1px solid var(--border); padding-top: 11px;
+  .acc-sec { min-width: 0; }
+
+  .telemetry {
+    display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap;
+    border-top: 1px solid var(--border); padding-top: 8px;
+    color: var(--text-faint); font-size: 10.5px; font-family: var(--mono);
   }
+  .telemetry b { color: var(--text-dim); font-weight: 600; }
+  .telemetry b.bad { color: var(--red); }
+
+  .actions-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .actions-grid .btn { min-height: 28px; padding: 3px 6px; font-size: 11px; }
+
   .acc-empty {
     grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 14px;
     padding: 40px 20px;
   }
   .acc-empty .empty { padding: 0; }
+
+  @media (max-width: 1279px) {
+    .acc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   @media (max-width: 900px) {
     .settings-layout { grid-template-columns: 1fr; }
-    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .card:nth-child(2n) { border-right: 0; }
-    .card:nth-child(n+3) { border-top: 1px solid var(--border); }
+    .acc-grid { grid-template-columns: 1fr; }
+    .topbar-in { padding-left: 16px; padding-right: 16px; }
   }
-  @media (max-width: 640px) {
-    .wrap { padding: 0 16px 32px; }
-    header.bar { flex-wrap: wrap; gap: 10px; padding: 16px 0; }
-    header.bar .logo { flex: 1; }
-    header.bar .ver { order: 5; width: 100%; white-space: normal; overflow-wrap: anywhere; }
-    header.bar .spacer { display: none; }
-    nav.tabs { gap: 0; }
-    nav.tabs button { padding: 10px 12px; }
+  @media (max-width: 760px) {
+    .wrap { padding: 16px 16px 56px; }
+    .topbar-in { padding: 8px 16px; }
+    .acc-grid { grid-template-columns: 1fr; }
+    .actions-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .boost-flag { display: none; }
+    .brand .ver { white-space: normal; overflow-wrap: anywhere; }
+    .tb-actions { width: 100%; }
     .panel { padding: 16px; }
     .panel-head { align-items: flex-start; }
     .head-actions { width: 100%; }
     .head-actions input { flex: 1; width: 100%; }
-    .card { padding: 16px; }
-    .card .value { font-size: 19px; }
     .kv { grid-template-columns: minmax(100px, 1fr) minmax(0, 1.5fr); gap: 12px; }
     #view-login { padding-top: 6vh; }
     .login-box { padding: 24px; }
@@ -297,6 +450,13 @@
     .toast { max-width: 100%; overflow-wrap: anywhere; }
   }
 </style>
+<script>
+  // Pin the stored theme before first paint so a dark OS never flashes light.
+  try {
+    var pinned = localStorage.getItem("cc2api.theme");
+    if (pinned === "light" || pinned === "dark") document.documentElement.setAttribute("data-theme", pinned);
+  } catch (_) {}
+</script>
 </head>
 <body>
 
@@ -332,41 +492,42 @@
 </div>
 
 <!-- main app -->
-<div id="view-app" class="wrap" style="display:none">
-  <header class="bar">
-    <div class="logo">cmdcode2api <span data-i18n="app.console">Console</span></div>
-    <div class="ver" id="ver"></div>
-    <div class="spacer"></div>
-    <select class="lang-select" aria-label="Language">
-      <option value="en">English</option>
-      <option value="zh-CN">简体中文</option>
-    </select>
-    <button class="btn small" id="logout-btn" data-i18n="app.logout">Sign out</button>
+<div id="view-app" style="display:none">
+  <header class="topbar">
+    <div class="topbar-in">
+      <div class="brand">
+        <b>cmdcode2api</b><span class="sub" data-i18n="app.console">Console</span>
+        <span class="ver" id="ver"></span>
+      </div>
+      <nav class="tabs" data-i18n-aria="nav.aria" aria-label="Console views">
+        <button data-tab="accounts" class="active"><span data-i18n="nav.accounts">Accounts</span><span class="count" data-count="accounts"></span></button>
+        <button data-tab="models"><span data-i18n="nav.models">Models</span><span class="count" data-count="models"></span></button>
+        <button data-tab="keys"><span data-i18n="nav.keys">Keys</span><span class="count" data-count="keys"></span></button>
+        <button data-tab="settings"><span data-i18n="nav.settings">Settings</span></button>
+        <button data-tab="logs"><span data-i18n="nav.logs">Logs</span></button>
+      </nav>
+      <div class="spacer"></div>
+      <div class="tb-actions">
+        <select class="lang-select" aria-label="Language">
+          <option value="en">English</option>
+          <option value="zh-CN">简体中文</option>
+        </select>
+        <button class="btn ghost small" id="theme-btn" type="button" data-i18n-title="theme.aria">Dark</button>
+        <button class="btn small" id="logout-btn" data-i18n="app.logout">Sign out</button>
+      </div>
+    </div>
   </header>
 
-  <nav class="tabs">
-    <button data-tab="overview" class="active" data-i18n="nav.overview">Overview</button>
-    <button data-tab="accounts" data-i18n="nav.accounts">Accounts</button>
-    <button data-tab="models" data-i18n="nav.models">Models</button>
-    <button data-tab="keys" data-i18n="nav.keys">Keys</button>
-    <button data-tab="settings" data-i18n="nav.settings">Settings</button>
-    <button data-tab="logs" data-i18n="nav.logs">Logs</button>
-  </nav>
+  <main class="wrap">
 
-  <!-- overview -->
-  <section id="tab-overview">
-    <div class="cards" id="ov-cards"></div>
-    <div class="panel">
-      <div class="panel-head"><h2 data-i18n="ov.title">Account status</h2></div>
-      <div id="ov-accounts"></div>
-    </div>
-  </section>
+  <!-- compact service line, then the account cards underneath -->
+  <div class="statline" id="ov-line" aria-live="polite"></div>
 
   <!-- accounts -->
-  <section id="tab-accounts" style="display:none">
+  <section id="tab-accounts">
     <div class="panel">
       <div class="panel-head">
-        <h2 data-i18n="acc.listTitle">Account list</h2>
+        <h2><span data-i18n="acc.listTitle">Account list</span><span class="meta" id="acc-meta"></span></h2>
         <span class="head-actions">
           <button class="btn small" id="quota-refresh-all" data-i18n="quota.refreshAll">Refresh all quotas</button>
           <button class="btn small primary" id="acc-add-open" data-i18n="acc.addTitle">Add account</button>
@@ -462,6 +623,7 @@
       <div class="logbox" id="logbox"><div class="empty" data-i18n="logs.empty">No logs yet</div></div>
     </div>
   </section>
+  </main>
 </div>
 
 <!-- create client key -->
@@ -518,6 +680,11 @@
       <span class="cap" data-i18n="acc.editKeyLabel">API key (leave blank to keep current)</span>
       <input type="text" id="acct-edit-key" placeholder="user_…" class="mono">
     </label>
+    <label class="field">
+      <span class="cap" data-i18n="acc.pauseBelowLabel">Pause below remaining credits</span>
+      <input type="number" id="acct-edit-pause" min="0" step="0.5" placeholder="0">
+    </label>
+    <p class="hint" style="margin:0 0 14px" data-i18n="acc.pauseBelowHint">0 disables the guard. While this account's remaining monthly balance is at or below this amount, the gateway skips it and resumes automatically once the balance recovers.</p>
     <p class="hint" style="margin:0 0 14px" data-i18n="acc.editHint">Usage history is kept when you change the API key.</p>
     <div class="form-row">
       <button class="btn primary" id="acct-edit-save" data-i18n="common.save">Save</button>
@@ -563,6 +730,43 @@
 const $ = (s) => document.querySelector(s);
 function readStoredToken() {
   return localStorage.getItem("cc2api.token") || sessionStorage.getItem("cc2api.token") || "";
+}
+
+/* ---------- theme ---------- */
+
+// The OS decides by default; the header button pins an explicit theme.
+const THEME_KEY = "cc2api.theme";
+
+function pinnedTheme() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    return v === "light" || v === "dark" ? v : "";
+  } catch (_) { return ""; }
+}
+
+function effectiveTheme() {
+  const pinned = pinnedTheme();
+  if (pinned) return pinned;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function updateThemeButton() {
+  const btn = $("#theme-btn");
+  if (!btn) return;
+  btn.textContent = effectiveTheme() === "dark" ? t("theme.light") : t("theme.dark");
+  btn.title = t("theme.aria");
+}
+
+function applyTheme() {
+  const pinned = pinnedTheme();
+  if (pinned) document.documentElement.setAttribute("data-theme", pinned);
+  else document.documentElement.removeAttribute("data-theme");
+  updateThemeButton();
+}
+
+function toggleTheme() {
+  try { localStorage.setItem(THEME_KEY, effectiveTheme() === "dark" ? "light" : "dark"); } catch (_) {}
+  applyTheme();
 }
 
 /* ---------- i18n ---------- */
@@ -629,9 +833,10 @@ const I18N = {
     "quota.monthly": "Monthly",
     "quota.weekly": "Weekly",
     "quota.window.5h": "5 hours",
-    "quota.monthlyRemaining": "Monthly remaining {v}$",
-    "quota.purchasedBalance": "Purchased balance {v}$",
-    "quota.freeBalance": "Free balance {v}$",
+    "quota.unit": "credits",
+    "quota.monthlyRemaining": "Monthly remaining {v} credits",
+    "quota.purchasedBalance": "Purchased balance {v} credits",
+    "quota.freeBalance": "Free balance {v} credits",
     "quota.billingPeriod": "Billing period to {v}",
     "quota.cancelAtPeriodEnd": "Cancel at period end",
     "quota.lowBalanceBadge": "low balance",
@@ -639,6 +844,31 @@ const I18N = {
     "quota.estimated": "(estimated)",
     "quota.unknownReset": "Reset time unknown",
     "quota.noResetPoint": "Not used yet, no reset point",
+
+    "nav.aria": "Console views",
+
+    "theme.dark": "Dark",
+    "theme.light": "Light",
+    "theme.aria": "Switch color theme",
+
+    "ov.cacheRead": "cache read",
+    "ov.cacheWrite": "cache write",
+
+    "quota.pausedBelow": "paused below {v}",
+
+    "boost.title": "Boosted allowance",
+    "boost.est": "est",
+    "boost.model": "Model",
+    "boost.allow": "Allow",
+    "boost.boost": "Boost",
+    "boost.left": "left",
+    "boost.colLeft": "Left",
+    "boost.of": "of {usd}",
+    "boost.basis": "Allowance {allow} ÷ {pool} credit pool = {factor} per credit",
+    "boost.noteStandard": "{n} models at {usd}",
+    "boost.noteFiveHour": "5h left {usd}",
+    "boost.noteWeekly": "weekly left {usd}",
+    "boost.noteBasis": "Estimates only: allowance ÷ the {pool}-credit pool, applied to the remaining balance. Source: Command Code per-model allowances ({date}).",
 
     "login.desc": "Enter your server address and admin password.",
     "login.serverAddress": "Server address",
@@ -669,6 +899,10 @@ const I18N = {
     "uptime.s": "{s}s",
 
     "ov.title": "Account status",
+    "ov.lineRequests": "{n} requests · up {uptime}",
+    "ov.lineTokens": "{in} in · {out} out",
+    "ov.lineAccounts": "{enabled}/{total} accounts",
+    "ov.lineQuota": "{synced}/{total} synced",
     "ov.totalRequests": "Total requests",
     "ov.running": "up {uptime}",
     "ov.promptTokens": "Input tokens",
@@ -697,6 +931,10 @@ const I18N = {
     "acc.empty": "No accounts yet",
     "acc.statusOk": "Healthy",
     "acc.statusRateLimited": "Rate-limited",
+    "acc.statusPaused": "Paused (low credits)",
+    "acc.pausedAt": "Skipped while remaining credits are at or below {amount} credits",
+    "acc.pauseBelowLabel": "Pause below remaining credits",
+    "acc.pauseBelowHint": "Counted in plan credits, not USD. 0 disables the guard. While this account's remaining monthly credits are at or below this amount, the gateway skips it and resumes automatically once the balance recovers.",
     "acc.statusAuthError": "Auth failed",
     "acc.statusDisabled": "Disabled",
     "acc.rateLimitedBadge": "rate-limited · {time}",
@@ -842,9 +1080,10 @@ const I18N = {
     "quota.monthly": "每月",
     "quota.weekly": "每周",
     "quota.window.5h": "5 小时",
-    "quota.monthlyRemaining": "本月剩余 {v}$",
-    "quota.purchasedBalance": "已购余额 {v}$",
-    "quota.freeBalance": "免费余额 {v}$",
+    "quota.unit": "积分",
+    "quota.monthlyRemaining": "本月剩余 {v} 积分",
+    "quota.purchasedBalance": "已购余额 {v} 积分",
+    "quota.freeBalance": "免费余额 {v} 积分",
     "quota.billingPeriod": "账期截至 {v}",
     "quota.cancelAtPeriodEnd": "到期后取消",
     "quota.lowBalanceBadge": "余额不足",
@@ -852,6 +1091,31 @@ const I18N = {
     "quota.estimated": "（估计）",
     "quota.unknownReset": "重置时间未知",
     "quota.noResetPoint": "尚未使用，无重置点",
+
+    "nav.aria": "控制台视图",
+
+    "theme.dark": "深色",
+    "theme.light": "浅色",
+    "theme.aria": "切换配色主题",
+
+    "ov.cacheRead": "缓存读取",
+    "ov.cacheWrite": "缓存写入",
+
+    "quota.pausedBelow": "低于 {v} 时暂停",
+
+    "boost.title": "提升额度",
+    "boost.est": "估计",
+    "boost.model": "模型",
+    "boost.allow": "额度",
+    "boost.boost": "倍率",
+    "boost.left": "剩余",
+    "boost.colLeft": "剩余",
+    "boost.of": "共 {usd}",
+    "boost.basis": "额度 {allow} ÷ {pool} 积分池 = 每积分 {factor}",
+    "boost.noteStandard": "{n} 个模型为 {usd}",
+    "boost.noteFiveHour": "5 小时剩余 {usd}",
+    "boost.noteWeekly": "每周剩余 {usd}",
+    "boost.noteBasis": "仅为估算：额度 ÷ {pool} 积分池，再乘以剩余积分。来源：Command Code 各模型额度（{date}）。",
 
     "login.desc": "填写服务器地址和管理密码。",
     "login.serverAddress": "服务器地址",
@@ -882,6 +1146,10 @@ const I18N = {
     "uptime.s": "{s}秒",
 
     "ov.title": "账号状态",
+    "ov.lineRequests": "{n} 次请求 · 运行 {uptime}",
+    "ov.lineTokens": "{in} 输入 · {out} 输出",
+    "ov.lineAccounts": "{enabled}/{total} 个账号",
+    "ov.lineQuota": "{synced}/{total} 已同步",
     "ov.totalRequests": "总请求数",
     "ov.running": "运行 {uptime}",
     "ov.promptTokens": "输入 Tokens",
@@ -910,6 +1178,10 @@ const I18N = {
     "acc.empty": "暂无账号",
     "acc.statusOk": "正常",
     "acc.statusRateLimited": "限流中",
+    "acc.statusPaused": "已暂停（额度不足）",
+    "acc.pausedAt": "剩余积分不高于 {amount} 积分时跳过该账号",
+    "acc.pauseBelowLabel": "剩余积分低于此值时暂停",
+    "acc.pauseBelowHint": "以套餐积分计算，不是美元。0 表示关闭。该账号剩余月度积分不高于此值时，网关会跳过它，积分恢复后自动启用。",
     "acc.statusAuthError": "鉴权失败",
     "acc.statusDisabled": "已禁用",
     "acc.rateLimitedBadge": "限流中 · {time}",
@@ -1033,6 +1305,7 @@ function applyI18n() {
   for (const el of document.querySelectorAll("[data-i18n-ph]")) el.placeholder = t(el.dataset.i18nPh);
   for (const el of document.querySelectorAll("[data-i18n-aria]")) el.setAttribute("aria-label", t(el.dataset.i18nAria));
   for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = t(el.dataset.i18nTitle);
+  updateThemeButton();
 }
 
 function setLang(lang) {
@@ -1064,7 +1337,7 @@ const state = {
   base: localStorage.getItem("cc2api.base") || "",
   token: readStoredToken(),
   lang: "en",
-  tab: "overview",
+  tab: "accounts",
   logsSeq: 0,
   oauthTimer: null,
   models: [],
@@ -1082,6 +1355,12 @@ function esc(s) {
 }
 
 function fmtInt(n) { return Number(n || 0).toLocaleString(locale()); }
+
+// Tab counters are filled from the overview payload; empty hides the chip.
+function setTabCount(name, n) {
+  const el = document.querySelector(`nav.tabs .count[data-count="${name}"]`);
+  if (el) el.textContent = Number(n) > 0 ? fmtInt(n) : "";
+}
 
 function fmtTokens(n) {
   n = Number(n || 0);
@@ -1124,6 +1403,15 @@ function inTime(iso) {
 function fmtCredit(n) {
   if (n == null || !isFinite(Number(n))) return "—";
   return Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+// USD figures are estimates derived from the captured per-model allowance
+// table. The upstream credit numbers stay authoritative.
+function fmtUSD(n) {
+  if (n == null || !isFinite(Number(n))) return "—";
+  const v = Number(n);
+  const digits = Math.abs(v) >= 100 || Number.isInteger(v) ? 0 : 2;
+  return "$" + v.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
 function fmtDate(iso) {
@@ -1170,18 +1458,15 @@ function quotaBar(label, w, estimated) {
   const ratio = cap > 0 ? used / cap : 0;
   const pct = cap > 0 ? Math.min(100, Math.max(0, ratio * 100)) : 0;
   const pctText = cap > 0 ? Math.round(ratio * 100) + "%" : "—";
-  let value = "—", sub = "";
-  if (cap > 0) {
-    value = fmtCredit(used) + " / " + fmtCredit(cap) + " $";
-    sub = quotaResetText(w);
-  }
-  return `<div class="qbar">
-    <div class="qhead">
-      <span class="qlabel">${esc(label)}${estimated ? ' <span class="faint">(' + esc(t("quota.estimated")) + ')</span>' : ""}</span>
-      <span class="qval">${esc(pctText)}</span>
+  const level = quotaLevel(ratio);
+  const value = cap > 0 ? fmtCredit(used) + " / " + fmtCredit(cap) + " " + t("quota.unit") : "";
+  const reset = quotaResetText(w);
+  return `<div class="meter">
+    <div class="meter-row">
+      <span class="meter-label">${esc(label)}${estimated ? ' <span class="faint">' + esc(t("quota.estimated")) + "</span>" : ""}${value ? `<span class="val">${esc(value)}</span>` : ""}<span class="pct p${level}">${esc(pctText)}</span></span>
+      <span class="meter-reset">${esc(reset)}</span>
     </div>
-    <span class="track"><span class="fill lvl-${quotaLevel(ratio)}" style="width:${pct.toFixed(1)}%"></span></span>
-    ${value !== "—" ? `<div class="qsub">${esc(value)}${sub ? " · " + esc(sub) : ""}</div>` : `<div class="qsub">${esc(sub || t("quota.noWindow"))}</div>`}
+    <span class="track"><span class="fill lvl${level}" style="width:${pct.toFixed(1)}%"></span></span>
   </div>`;
 }
 
@@ -1199,6 +1484,64 @@ function quotaMonthBar(q) {
   return quotaBar(t("quota.monthly"), { used, cap, exceeded: used >= cap, reset_at: plan.current_period_end }, true);
 }
 
+// Plan badges get distinct colors so the plan is readable at a glance.
+function planBadge(a) {
+  const plan = (a && a.quota && a.quota.plan) || null;
+  if (!plan || !plan.name) return "";
+  const id = String(plan.plan_id || "").toLowerCase();
+  const name = String(plan.name).toLowerCase();
+  let cls = "plan";
+  if (id.includes("provider")) cls = "plan";
+  else if (id.includes("goat") || name.includes("goat")) cls = "plan-goat";
+  else if (id.includes("max") || name.includes("max")) cls = "plan-max";
+  else if (id.includes("team") || name.includes("team")) cls = "plan-team";
+  else if (id.includes("pro") || name.includes("pro")) cls = "plan-pro";
+  else if (id.includes("go") || name === "go") cls = "plan-go";
+  const title = plan.plan_id ? ` title="${esc(plan.plan_id)}"` : "";
+  return `<span class="badge plan ${cls}"${title}>${esc(plan.name)}</span>`;
+}
+
+// Boosted-model tracker: the backend converts the remaining credits with each
+// model's own allowance, so these USD figures are estimates over authoritative
+// credit numbers. Collapsed by default to keep the card dense.
+function boostDetail(a) {
+  const b = a.boosted;
+  if (!b || !b.models || !b.models.length) return "";
+  const pool = Number(b.pool_credits) || 0;
+  const top = b.models[0];
+  const basis = t("boost.basis", {
+    allow: fmtUSD(top.allowance_usd),
+    pool: fmtCredit(pool),
+    factor: fmtUSD(pool > 0 ? top.allowance_usd / pool : 0),
+  });
+  const rows = b.models.map(m => `<tr>
+      <td class="model">${esc(m.name)}</td>
+      <td class="num allow">${esc(fmtUSD(m.allowance_usd))}</td>
+      <td class="num boostx">×${(Number(m.factor) || 0).toFixed(2)}</td>
+      <td class="num left">${esc(fmtUSD(m.remaining_usd))}</td>
+    </tr>`).join("");
+  const notes = [];
+  if (b.standard_models > 0) notes.push(t("boost.noteStandard", { n: b.standard_models, usd: fmtUSD(b.standard_usd) }));
+  if (top.five_hour_usd != null) notes.push(t("boost.noteFiveHour", { usd: fmtUSD(top.five_hour_usd) }));
+  if (top.weekly_usd != null) notes.push(t("boost.noteWeekly", { usd: fmtUSD(top.weekly_usd) }));
+  notes.push(t("boost.noteBasis", { pool: fmtCredit(pool), date: b.source_captured || "—" }));
+  return `<details class="boost">
+    <summary title="${esc(basis)}">
+      <span class="chev"></span>
+      <span class="boost-title">${esc(t("boost.title"))}</span>
+      <span class="boost-peak">${esc(top.name)} <span class="left">${esc(fmtUSD(top.remaining_usd))} ${esc(t("boost.left"))}</span> <span class="of">${esc(t("boost.of", { usd: fmtUSD(top.allowance_usd) }))}</span></span>
+      <span class="boost-flag">${esc(t("boost.est"))}</span>
+    </summary>
+    <div class="boost-body">
+      <table class="bm">
+        <thead><tr><th>${esc(t("boost.model"))}</th><th class="num">${esc(t("boost.allow"))}</th><th class="num">${esc(t("boost.boost"))}</th><th class="num">${esc(t("boost.colLeft"))}</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p class="boost-note">${esc(notes.join(" · "))}</p>
+    </div>
+  </details>`;
+}
+
 function quotaDetail(a) {
   const q = a.quota;
   if (!q) {
@@ -1209,22 +1552,25 @@ function quotaDetail(a) {
     quotaBar(t("quota.weekly"), q.weekly, false),
     quotaMonthBar(q),
   ].filter(Boolean).join("");
+  const plan = q.plan || {};
   const meta = [];
   if (q.monthly_credits != null) meta.push(t("quota.monthlyRemaining", { v: fmtCredit(q.monthly_credits) }));
   if (q.purchased_credits != null) meta.push(t("quota.purchasedBalance", { v: fmtCredit(q.purchased_credits) }));
   if (q.free_credits != null) meta.push(t("quota.freeBalance", { v: fmtCredit(q.free_credits) }));
-  if (q.plan && q.plan.name) meta.push('<span class="badge ok">' + esc(q.plan.name) + '</span>' + (q.plan.status ? ' · ' + esc(q.plan.status) : ''));
-  if (q.plan && q.plan.current_period_end) meta.push(t("quota.billingPeriod", { v: fmtDate(q.plan.current_period_end) }));
-  if (q.plan && q.plan.cancel_at_period_end) meta.push('<span class="badge warn">' + esc(t("quota.cancelAtPeriodEnd")) + '</span>');
-  if (q.below_threshold) meta.push('<span class="badge warn">' + esc(t("quota.lowBalanceBadge")) + '</span>');
-  if (q.exceeded) meta.push('<span class="badge err">' + esc(t("quota.exceededBadge", { n: q.exceeded })) + '</span>');
+  if (Number(a.pause_below_credits) > 0) meta.push(t("quota.pausedBelow", { v: fmtCredit(a.pause_below_credits) }));
+  if (plan.current_period_end) meta.push(t("quota.billingPeriod", { v: fmtDate(plan.current_period_end) }));
+  if (plan.status) meta.push(`<span class="badge off">${esc(plan.status)}</span>`);
+  if (plan.cancel_at_period_end) meta.push(`<span class="badge warn">${esc(t("quota.cancelAtPeriodEnd"))}</span>`);
+  if (q.below_threshold) meta.push(`<span class="badge warn">${esc(t("quota.lowBalanceBadge"))}</span>`);
+  if (q.exceeded) meta.push(`<span class="badge err">${esc(t("quota.exceededBadge", { n: q.exceeded }))}</span>`);
   const errs = [];
   if (q.last_error) errs.push(q.last_error); // backend already localized via Accept-Language
   if (q.failures && q.failures.length) errs.push(q.failures.join(t("common.listSep")));
   const metaHTML = meta.map(m => `<span>${m}</span>`).join("") +
     (q.last_checked ? `<span class="faint">${esc(t("quota.lastChecked", { when: relTime(q.last_checked) }))}</span>` : "");
-  return `<div class="quota-bars">${bars || `<span class="faint">${esc(t("quota.noWindow"))}</span>`}</div>
+  return `<div class="meters">${bars || `<span class="faint">${esc(t("quota.noWindow"))}</span>`}</div>
     ${metaHTML ? `<div class="quota-meta">${metaHTML}</div>` : ""}
+    ${boostDetail(a)}
     ${errs.length ? `<div class="quota-err">${t("quota.errorPrefix")} ${esc(errs.join(", "))}</div>` : ""}`;
 }
 
@@ -1315,7 +1661,7 @@ function showLogin(prefillError) {
 function showApp() {
   $("#view-login").style.display = "none";
   $("#view-app").style.display = "";
-  switchTab("overview");
+  switchTab("accounts");
   refreshAll();
 }
 
@@ -1357,7 +1703,7 @@ function switchTab(tab) {
   state.tab = tab;
   document.querySelectorAll("nav.tabs button").forEach(b =>
     b.classList.toggle("active", b.dataset.tab === tab));
-  for (const name of ["overview", "accounts", "models", "keys", "settings", "logs"]) {
+  for (const name of ["accounts", "models", "keys", "settings", "logs"]) {
     $("#tab-" + name).style.display = name === tab ? "" : "none";
   }
   if (tab === "logs") loadLogs();
@@ -1376,48 +1722,33 @@ async function refreshAll() {
 
 setInterval(() => {
   if (document.hidden || $("#view-app").style.display === "none") return;
-  if (state.tab === "overview" || state.tab === "accounts") refreshAll();
+  if (state.tab === "accounts") refreshAll();
   if (state.tab === "keys") loadKeys();
   if (state.tab === "logs") loadLogs();
 }, 5000);
 
-/* ---------- overview ---------- */
+/* ---------- service line ---------- */
 
+// The old overview tab collapsed into one line above the account cards; the
+// counts that used to be KPI tiles now live in the tab chips.
 function renderOverview(ov) {
   $("#ver").textContent = ov.version + " · " + ov.listen;
   const u = ov.usage;
   const quo = ov.quotas || {};
-  const quotaSub = [];
-  if (quo.exceeded) quotaSub.push(t('quota.exceeded', { n: quo.exceeded }));
-  if (quo.low_balance) quotaSub.push(t('quota.lowBalance', { n: quo.low_balance }));
-  if (quo.last_checked_at) quotaSub.push(t('quota.lastCheckedShort', { when: relTime(quo.last_checked_at) }));
-  const cards = [
-    [t("ov.totalRequests"), fmtInt(u.total_requests), t("ov.running", { uptime: fmtUptime(ov.uptime_seconds) })],
-    [t("ov.promptTokens"), fmtTokens(u.prompt_tokens), ""],
-    [t("ov.completionTokens"), fmtTokens(u.completion_tokens), ""],
-    [t("ov.cacheTokens"), fmtTokens(u.cache_read_tokens) + " / " + fmtTokens(u.cache_write_tokens), ""],
-    [t("ov.accounts"), t("ov.accountsValue", { enabled: ov.accounts.enabled, total: ov.accounts.total }), ov.accounts.rate_limited > 0 ? t("ov.rateLimitedCount", { n: ov.accounts.rate_limited }) : ""],
-    [t("quota.syncStatus"), t("quota.syncValue", { synced: quo.synced || 0, total: ov.accounts.total }), quotaSub.join(" · ")],
-    [t("ov.clientKeys"), t("ov.keysValue", { enabled: ov.keys.enabled, total: ov.keys.total }), ""],
-    [t("ov.models"), t("ov.modelsAvailable", { n: ov.models.available }), t("ov.modelsLoaded", { n: ov.models.loaded })],
+  const items = [
+    `<span>${esc(t("ov.lineRequests", { n: fmtInt(u.total_requests), uptime: fmtUptime(ov.uptime_seconds) }))}</span>`,
+    `<span>${esc(t("ov.lineTokens", { in: fmtTokens(u.prompt_tokens), out: fmtTokens(u.completion_tokens) }))}</span>`,
+    `<span>${esc(t("ov.lineAccounts", { enabled: ov.accounts.enabled, total: ov.accounts.total }))}</span>`,
+    `<span>${esc(t("ov.lineQuota", { synced: quo.synced || 0, total: ov.accounts.total }))}</span>`,
   ];
-  $("#ov-cards").innerHTML = cards.map(([label, value, sub]) => `
-    <div class="card">
-      <div class="label">${esc(label)}</div>
-      <div class="value">${esc(value)}</div>
-      ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
-    </div>`).join("");
+  if (quo.exceeded) items.push(`<span class="badge err">${esc(t("quota.exceeded", { n: quo.exceeded }))}</span>`);
+  if (quo.low_balance) items.push(`<span class="badge warn">${esc(t("quota.lowBalance", { n: quo.low_balance }))}</span>`);
+  if (quo.last_checked_at) items.push(`<span>${esc(t("quota.lastCheckedShort", { when: relTime(quo.last_checked_at) }))}</span>`);
+  $("#ov-line").innerHTML = items.join("");
 
-  const accs = ov.accounts;
-  let html = `<div class="kv">
-    <span class="k">${esc(t("ov.listen"))}</span><span class="v">${esc(ov.listen)}</span>
-    <span class="k">${esc(t("ov.webui"))}</span><span class="v">${ov.webui ? esc(t("common.enabled")) : esc(t("common.disabled"))}</span>
-    <span class="k">${esc(t("ov.rateLimited"))}</span><span class="v">${accs.rate_limited}</span>
-    <span class="k">${esc(t("quota.kvExceeded"))}</span><span class="v">${quo.exceeded || 0}</span>
-    <span class="k">${esc(t("quota.kvLowBalance"))}</span><span class="v">${quo.low_balance || 0}</span>
-    <span class="k">${esc(t("quota.kvLastChecked"))}</span><span class="v">${esc(relTime(quo.last_checked_at))}</span>
-  </div>`;
-  $("#ov-accounts").innerHTML = html;
+  setTabCount("accounts", ov.accounts.total);
+  setTabCount("models", ov.models.available);
+  setTabCount("keys", ov.keys.total);
 }
 
 /* ---------- accounts ---------- */
@@ -1426,6 +1757,7 @@ function statusMeta(status) {
   switch (status) {
     case "ok":           return { cls: "ok",   text: t("acc.statusOk") };
     case "rate_limited": return { cls: "warn", text: t("acc.statusRateLimited") };
+    case "paused":       return { cls: "warn", text: t("acc.statusPaused") };
     case "auth_error":   return { cls: "err",  text: t("acc.statusAuthError") };
     case "disabled":     return { cls: "off",  text: t("acc.statusDisabled") };
     default:             return { cls: "off",  text: status };
@@ -1436,6 +1768,10 @@ function statusBadge(a) {
   if (a.status === "rate_limited" && a.rate_limited_until) {
     return `<span class="badge warn" title="${esc(a.rate_limited_until)}">${esc(t("acc.rateLimitedBadge", { time: inTime(a.rate_limited_until) }))}</span>`;
   }
+  if (a.status === "paused") {
+    const hint = Number(a.pause_below_credits) > 0 ? t("acc.pausedAt", { amount: fmtCredit(a.pause_below_credits) }) : "";
+    return `<span class="badge warn" title="${esc(hint)}">${esc(t("acc.statusPaused"))}</span>`;
+  }
   const meta = statusMeta(a.status);
   return `<span class="badge ${meta.cls}">${esc(meta.text)}</span>`;
 }
@@ -1443,6 +1779,13 @@ function statusBadge(a) {
 function renderAccounts(accounts) {
   const box = $("#acc-list");
   const hasAccounts = Boolean(accounts && accounts.length);
+  setTabCount("accounts", hasAccounts ? accounts.length : 0);
+  const meta = $("#acc-meta");
+  if (meta) {
+    meta.textContent = hasAccounts
+      ? t("ov.lineAccounts", { enabled: accounts.filter(a => a.enabled).length, total: accounts.length })
+      : "";
+  }
   $("#quota-refresh-all").hidden = !hasAccounts;
   $("#acc-add-open").hidden = !hasAccounts;
   if (!accounts || !accounts.length) {
@@ -1457,7 +1800,7 @@ function renderAccounts(accounts) {
 
 function accountCard(a) {
   const tokens = (a.prompt_tokens || 0) + (a.completion_tokens || 0);
-  const mods = [a.status === "auth_error" ? "is-err" : a.status === "rate_limited" ? "is-warn" : "", a.enabled ? "" : "is-off"].filter(Boolean).join(" ");
+  const mods = [a.status === "auth_error" ? "is-err" : (a.status === "rate_limited" || a.status === "paused") ? "is-warn" : "", a.enabled ? "" : "is-off"].filter(Boolean).join(" ");
   const authFail = a.auth_failures > 0 ? `<span class="authfail">${esc(t("acc.authFailures", { n: a.auth_failures }))}</span>` : "";
   return `<article class="acc-card ${mods}">
     <div class="acc-head">
@@ -1465,19 +1808,19 @@ function accountCard(a) {
         <div class="acc-name" title="${esc(a.name)}">${esc(a.name)}</div>
         <div class="acc-key mono" title="${esc(a.key_masked)}">${esc(a.key_masked)}</div>
       </div>
-      <div class="acc-badges">${statusBadge(a)}${authFail}</div>
-    </div>
-    <div class="acc-stats">
-      <div class="acc-stat"><span class="k">${esc(t("common.requests"))}</span><span class="v">${fmtInt(a.requests)}</span></div>
-      <div class="acc-stat"><span class="k">${esc(t("common.tokens"))}</span><span class="v">${fmtTokens(tokens)}</span></div>
-      <div class="acc-stat"><span class="k">${esc(t("common.errors"))}</span><span class="v${a.errors ? " bad" : ""}">${fmtInt(a.errors)}</span></div>
-      <div class="acc-stat"><span class="k">${esc(t("common.lastUsed"))}</span><span class="v t" title="${esc(a.last_used_at || "")}">${esc(relTime(a.last_used_at))}</span></div>
+      <div class="acc-badges">${planBadge(a)}${statusBadge(a)}${authFail}</div>
     </div>
     <div class="acc-sec">${quotaDetail(a)}</div>
-    <div class="acc-actions">
+    <div class="telemetry">
+      <span>${esc(t("common.requests"))} <b>${fmtInt(a.requests)}</b></span>
+      <span>${esc(t("common.tokens"))} <b>${fmtTokens(tokens)}</b></span>
+      <span>${esc(t("common.errors"))} <b class="${a.errors ? "bad" : ""}">${fmtInt(a.errors)}</b></span>
+      <span>${esc(t("common.lastUsed"))} <b title="${esc(a.last_used_at || "")}">${esc(relTime(a.last_used_at))}</b></span>
+    </div>
+    <div class="actions-grid">
       <button class="btn small" onclick="refreshAccountQuota('${a.id}')">${esc(t("quota.refreshOne"))}</button>
       <button class="btn small" onclick="testAccount('${a.id}')">${esc(t("common.test"))}</button>
-      <button class="btn small" onclick="openAccountEdit('${a.id}', '${esc(a.name)}')">${esc(t("common.edit"))}</button>
+      <button class="btn small" onclick="openAccountEdit('${a.id}', '${esc(a.name)}', ${Number(a.pause_below_credits) || 0})">${esc(t("common.edit"))}</button>
       <button class="btn small" onclick="toggleAccount('${a.id}', ${a.enabled ? "false" : "true"})">${a.enabled ? esc(t("common.disable")) : esc(t("common.enable"))}</button>
       <button class="btn small danger" onclick="deleteAccount('${a.id}', '${esc(a.name)}')">${esc(t("common.delete"))}</button>
     </div>
@@ -1533,10 +1876,11 @@ async function deleteAccount(id, name) {
   } catch (e) { toast(e.message, true); }
 }
 
-function openAccountEdit(id, name) {
+function openAccountEdit(id, name, pauseBelow) {
   state.editingAccount = id;
   $("#acct-edit-name").value = name;
   $("#acct-edit-key").value = "";
+  $("#acct-edit-pause").value = Number(pauseBelow) > 0 ? String(pauseBelow) : "";
   $("#acct-modal").style.display = "";
   focusDialog($("#acct-modal"));
 }
@@ -1547,6 +1891,8 @@ async function saveAccountEdit() {
   const body = { name: $("#acct-edit-name").value.trim() };
   const newKey = $("#acct-edit-key").value.trim();
   if (newKey) body.api_key = newKey;
+  const pauseBelow = Number($("#acct-edit-pause").value);
+  body.pause_below_credits = isFinite(pauseBelow) && pauseBelow > 0 ? pauseBelow : 0;
   try {
     await api("/admin/api/accounts/" + id, { method: "PATCH", body });
     hideModal("#acct-modal");
@@ -1924,6 +2270,14 @@ function closeOAuth() {
 $("#login-form").addEventListener("submit", e => { e.preventDefault(); tryConnect(); });
 $("#login-base").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#login-token").focus(); } });
 $("#logout-btn").addEventListener("click", () => logout());
+$("#theme-btn").addEventListener("click", toggleTheme);
+
+if (window.matchMedia) {
+  const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+  const onScheme = () => { if (!pinnedTheme()) applyTheme(); };
+  if (scheme.addEventListener) scheme.addEventListener("change", onScheme);
+  else if (scheme.addListener) scheme.addListener(onScheme);
+}
 
 document.querySelectorAll("select.lang-select").forEach(sel =>
   sel.addEventListener("change", () => setLang(sel.value)));
@@ -1997,6 +2351,7 @@ $("#pw-form").addEventListener("submit", async e => {
 
 state.lang = localStorage.getItem("cc2api.lang") || detectLang();
 setLang(state.lang);
+applyTheme();
 
 if (state.token) {
   api("/admin/api/overview").then(ov => {

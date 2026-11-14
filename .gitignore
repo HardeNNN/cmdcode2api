@@ -12,3 +12,6 @@ log.txt*
 *.log
 *.patch
 changes_report.md
+
+# local probes, captured payloads and UI mocks
+scratch/
