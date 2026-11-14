@@ -2357,7 +2357,13 @@ if (state.token) {
   api("/admin/api/overview").then(ov => {
     renderOverview(ov);
     showApp();
-  }).catch(() => {});
+  }).catch(err => {
+    // A stale stored base or a rejected token must never leave both views
+    // hidden: fall back to the login screen with the reason.
+    if ($("#view-app").style.display === "none" && $("#view-login").style.display === "none") {
+      showLogin(err && err.message ? err.message : "");
+    }
+  });
 } else {
   showLogin();
 }
