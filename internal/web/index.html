@@ -347,6 +347,12 @@
   .quota-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 12px; font-size: 11.5px; color: var(--text-dim); align-items: center; }
   .quota-meta b { color: var(--text); font-weight: 600; font-family: var(--mono); }
   .quota-meta .sep { color: var(--text-faint); }
+  .quota-meta .remaining { color: var(--text); font-weight: 600; font-size: 12px; }
+  .quota-meta .remaining b { font-size: 13px; }
+  .quota-meta .remaining b.p1 { color: var(--green); }
+  .quota-meta .remaining b.p2 { color: var(--amber); }
+  .quota-meta .remaining b.p3 { color: var(--orange); }
+  .quota-meta .remaining b.p4 { color: var(--red); }
   .quota-err { color: var(--red); font-size: 11.5px; font-family: var(--mono); margin-top: 11px; word-break: break-all; }
 
   /* ---------- boosted allowance expander ---------- */
@@ -859,6 +865,8 @@ const I18N = {
     "quota.window.5h": "5 hours",
     "quota.unit": "credits",
     "quota.monthlyRemaining": "Monthly remaining {v} credits",
+    "quota.monthlyRemainingLabel": "Monthly remaining",
+    "quota.monthlyRemainingValue": "{v} credits",
     "quota.purchasedBalance": "Purchased balance {v} credits",
     "quota.freeBalance": "Free balance {v} credits",
     "quota.billingPeriod": "Billing period to {v}",
@@ -1107,6 +1115,8 @@ const I18N = {
     "quota.window.5h": "5 小时",
     "quota.unit": "积分",
     "quota.monthlyRemaining": "本月剩余 {v} 积分",
+    "quota.monthlyRemainingLabel": "本月剩余",
+    "quota.monthlyRemainingValue": "{v} 积分",
     "quota.purchasedBalance": "已购余额 {v} 积分",
     "quota.freeBalance": "免费余额 {v} 积分",
     "quota.billingPeriod": "账期截至 {v}",
@@ -1501,6 +1511,18 @@ function refreshTimers() {
   for (const el of root.querySelectorAll("[data-rel-fmt]")) setLiveText(el, t(el.dataset.relFmt, { when: relTime(el.dataset.relText) }));
 }
 
+// Remaining balance is colored against the plan allowance: comfortable, low or
+// nearly exhausted. Unlike quotaLevel this measures what is LEFT, not used.
+function remainingLevel(remaining, allowance) {
+  const total = Number(allowance);
+  if (!isFinite(total) || total <= 0) return "";
+  const left = Math.max(0, Number(remaining) || 0) / total;
+  if (left >= 0.5) return "p1";
+  if (left >= 0.25) return "p2";
+  if (left >= 0.1) return "p3";
+  return "p4";
+}
+
 function quotaBar(label, w, estimated) {
   if (!w) return "";
   const cap = Number(w.cap || 0), used = Number(w.used || 0);
@@ -1603,7 +1625,11 @@ function quotaDetail(a) {
   ].filter(Boolean).join("");
   const plan = q.plan || {};
   const meta = [];
-  if (q.monthly_credits != null) meta.push(t("quota.monthlyRemaining", { v: fmtCredit(q.monthly_credits) }));
+  if (q.monthly_credits != null) {
+    const allowance = plan.monthly_credits;
+    const cls = remainingLevel(q.monthly_credits, allowance);
+    meta.push(`<span class="remaining">${esc(t("quota.monthlyRemainingLabel"))} <b class="${cls}">${esc(t("quota.monthlyRemainingValue", { v: fmtCredit(q.monthly_credits) }))}</b></span>`);
+  }
   if (q.purchased_credits != null) meta.push(t("quota.purchasedBalance", { v: fmtCredit(q.purchased_credits) }));
   if (q.free_credits != null) meta.push(t("quota.freeBalance", { v: fmtCredit(q.free_credits) }));
   if (Number(a.pause_below_credits) > 0) meta.push(t("quota.pausedBelow", { v: fmtCredit(a.pause_below_credits) }));
@@ -1614,7 +1640,7 @@ function quotaDetail(a) {
   const errs = [];
   if (q.last_error) errs.push(q.last_error); // backend already localized via Accept-Language
   if (q.failures && q.failures.length) errs.push(q.failures.join(t("common.listSep")));
-  const metaHTML = meta.map(m => `<span>${m}</span>`).join("") +
+  const metaHTML = meta.map(m => m.startsWith("<") ? m : `<span>${m}</span>`).join("") +
     (q.last_checked ? `<span class="faint" data-rel-fmt="quota.lastChecked" data-rel-text="${esc(q.last_checked)}">${esc(t("quota.lastChecked", { when: relTime(q.last_checked) }))}</span>` : "");
   return `<div class="meters">${bars || `<span class="faint">${esc(t("quota.noWindow"))}</span>`}</div>
     ${metaHTML ? `<div class="quota-meta">${metaHTML}</div>` : ""}
