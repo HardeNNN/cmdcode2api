@@ -1358,6 +1358,7 @@ const state = {
   editingAccount: null,
   restartFields: [],
   accountsKey: "",
+  lastAccounts: [],
   openBoosts: new Set(),
 };
 
@@ -1793,7 +1794,9 @@ function renderOverview(ov) {
   // Compare against our own previous markup, not the live DOM: a translation
   // extension may have rewritten the text, and rewriting it back every poll is
   // what makes the line flicker.
-  const prev = line.dataset.items ? JSON.parse(line.dataset.items) : [];
+  const prev = (() => {
+    try { return line.dataset.items ? JSON.parse(line.dataset.items) : []; } catch (_) { return []; }
+  })();
   const kids = line.children;
   if (kids.length !== items.length) {
     line.innerHTML = items.join("");
@@ -1874,9 +1877,20 @@ function refreshLiveStats(accounts) {
   }
 }
 
+// Drop expander state for accounts that no longer exist, so a later account
+// reusing the same id does not pop open unexpectedly.
+function pruneOpenBoosts(accounts) {
+  if (!state.openBoosts.size) return;
+  const ids = new Set((accounts || []).map(a => a.id));
+  for (const id of state.openBoosts) {
+    if (!ids.has(id)) state.openBoosts.delete(id);
+  }
+}
+
 function renderAccounts(accounts) {
   const box = $("#acc-list");
   const hasAccounts = Boolean(accounts && accounts.length);
+  state.lastAccounts = accounts || [];
   // A 5s poll must not rebuild identical cards: that closes open boost
   // expanders and makes every timer label flash. Volatile counters (requests,
   // tokens, last used) are patched in place instead of forcing a rebuild.
@@ -1884,9 +1898,11 @@ function renderAccounts(accounts) {
   if (state.accountsKey === key && box.querySelector(".acc-grid, .acc-empty")) {
     refreshLiveStats(accounts);
     refreshTimers();
+    pruneOpenBoosts(accounts);
     return;
   }
   state.accountsKey = key;
+  pruneOpenBoosts(accounts);
   setTabCount("accounts", hasAccounts ? accounts.length : 0);
   const meta = $("#acc-meta");
   if (meta) {
@@ -1926,11 +1942,11 @@ function accountCard(a) {
       <span>${esc(t("common.lastUsed"))} <b data-live="used" title="${esc(a.last_used_at || "")}">${esc(relTime(a.last_used_at))}</b></span>
     </div>
     <div class="actions-grid">
-      <button class="btn small" onclick="refreshAccountQuota('${a.id}')">${esc(t("quota.refreshOne"))}</button>
-      <button class="btn small" onclick="testAccount('${a.id}')">${esc(t("common.test"))}</button>
-      <button class="btn small" onclick="openAccountEdit('${a.id}', '${esc(a.name)}', ${Number(a.pause_below_credits) || 0})">${esc(t("common.edit"))}</button>
-      <button class="btn small" onclick="toggleAccount('${a.id}', ${a.enabled ? "false" : "true"})">${a.enabled ? esc(t("common.disable")) : esc(t("common.enable"))}</button>
-      <button class="btn small danger" onclick="deleteAccount('${a.id}', '${esc(a.name)}')">${esc(t("common.delete"))}</button>
+      <button class="btn small" data-act="refresh" data-id="${esc(a.id)}">${esc(t("quota.refreshOne"))}</button>
+      <button class="btn small" data-act="test" data-id="${esc(a.id)}">${esc(t("common.test"))}</button>
+      <button class="btn small" data-act="edit" data-id="${esc(a.id)}">${esc(t("common.edit"))}</button>
+      <button class="btn small" data-act="toggle" data-id="${esc(a.id)}" data-enabled="${a.enabled ? "false" : "true"}">${a.enabled ? esc(t("common.disable")) : esc(t("common.enable"))}</button>
+      <button class="btn small danger" data-act="delete" data-id="${esc(a.id)}">${esc(t("common.delete"))}</button>
     </div>
     ${a.last_error ? `<div class="err-line">${esc(t("acc.lastError", { time: relTime(a.last_error_at), msg: a.last_error }))}</div>` : ""}
   </article>`;
@@ -2403,6 +2419,26 @@ $("#acc-list").addEventListener("toggle", e => {
   if (d.open) state.openBoosts.add(id);
   else state.openBoosts.delete(id);
 }, true);
+
+// Card actions are delegated and read the account from state: account names
+// can contain quotes, so inline onclick strings would be an injection risk.
+$("#acc-list").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const acct = state.lastAccounts.find(a => a.id === id);
+  switch (btn.dataset.act) {
+    case "refresh": refreshAccountQuota(id); break;
+    case "test": testAccount(id); break;
+    case "edit":
+      if (acct) openAccountEdit(acct.id, acct.name, Number(acct.pause_below_credits) || 0);
+      break;
+    case "toggle": toggleAccount(id, btn.dataset.enabled === "true"); break;
+    case "delete":
+      if (acct) deleteAccount(acct.id, acct.name);
+      break;
+  }
+});
 
 $("#acc-add-open").addEventListener("click", openAddAccount);
 $("#acc-add-btn").addEventListener("click", addAccount);
